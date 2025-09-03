@@ -27,10 +27,11 @@ namespace FoxDrive.Web.Controllers
         //   "@shared"                        -> list senders who shared with me (virtual folders)
         //   "@shared/{fromUser}"             -> list the root of grant Path for that sender
         //   "@shared/{fromUser}/sub/dir"     -> list within that sender’s share
+        // TODO: To be changed to db calls, not json
         private (string owner, string rel, bool isShared) Resolve(string? path)
         {
             path ??= "";
-            path = path.Replace('\\','/').Trim('/');
+            path = path.Replace('\\', '/').Trim('/');
             if (!path.StartsWith("@shared", StringComparison.OrdinalIgnoreCase))
             {
                 return (CurrentUser, path, false);
@@ -147,7 +148,6 @@ namespace FoxDrive.Web.Controllers
         [HttpPost("move")]
         public IActionResult Move([FromBody] MoveRequest req)
         {
-            // Resolve both ends
             var (fromOwner, fromRel, _) = Resolve(req.FromPath ?? "");
             var (toOwner, toRel, _)     = Resolve(req.ToPath   ?? "");
 

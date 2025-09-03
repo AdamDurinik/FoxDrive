@@ -137,7 +137,7 @@ function showCtx(x,y,items){
 function hideCtx(){ ctx.classList.remove('show'); }
 document.addEventListener('click', hideCtx);
 document.addEventListener('contextmenu', e=>{
-  if(e.target.closest('.card')) e.preventDefault(); // only block on our tiles
+  if(e.target.closest('.card')) e.preventDefault(); 
 });
 
 // ---------- Rendering ----------
@@ -243,7 +243,7 @@ document.getElementById('fileInput').addEventListener('change', e=>{
   api.upload(currentPath, form).then(()=> refresh());
 });
 
-// --- New Folder modal ---
+// --- Folder modal ---
 const newFolderModal = document.getElementById('newFolderModal');
 const newFolderInput = document.getElementById('newFolderName');
 const newFolderErr   = document.getElementById('newFolderErr');

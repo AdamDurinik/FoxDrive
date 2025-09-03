@@ -18,7 +18,7 @@ public class AuthController : Controller
     public IActionResult Login(string? returnUrl = "/")
     {
         ViewData["ReturnUrl"] = string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl;
-        return View(); // re-use your existing login.cshtml
+        return View(); 
     }
 
     [HttpPost("login")]
