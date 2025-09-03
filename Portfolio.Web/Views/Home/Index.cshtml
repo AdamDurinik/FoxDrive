@@ -1,0 +1,104 @@
+﻿@{
+  ViewData["Title"] = "Adam · Foxhint — Portfolio";
+}
+<header>
+  <img src="~/Resources/Logo_color.svg" alt="Foxhint" />
+  <nav style="margin-left:auto; display:flex; gap:8px;">
+    <a class="btn" href="/">Home</a>
+    <a class="btn" href="/Home/Projects">Projects</a>
+    <a class="btn primary" href="/Home/Contact">Contact</a>
+  </nav>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <img src="~/Resources/Logo_color.svg" alt="Logo" />
+    <div>
+      <h1 style="font-size:28px; letter-spacing:.2px; margin:0 0 8px;">
+        Hey, I’m Adam — I build useful stuff.
+      </h1>
+      <div class="muted">3D modeling & printing · .NET & self-hosting · Game servers</div>
+      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+        <a class="btn primary" href="/Home/Projects">See projects</a>
+        <a class="btn" href="https://foxdrive.foxhint.com" target="_blank" rel="noopener">FoxDrive</a>
+        <a class="btn" href="/Home/Contact">Get in touch</a>
+      </div>
+
+      <!-- quick stats -->
+      <div class="stats">
+        <div><strong>+100</strong><span class="muted">prints</span></div>
+        <div><strong>.NET</strong><span class="muted">C# / ASP.NET</span></div>
+        <div><strong>Self-hosted</strong><span class="muted">Cloudflare Tunnel</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURED -->
+  <section class="section">
+    <h2 style="margin:0 0 10px;">Featured</h2>
+    <div class="grid">
+      <a class="card" href="https://foxdrive.foxhint.com" target="_blank" rel="noopener">
+        <h3 style="margin:.2rem 0 .4rem">FoxDrive</h3>
+        <p>Self-hosted OneDrive-style app with auth, sharing, thumbnails, drag & drop.</p>
+      </a>
+      <div class="card">
+        <h3 style="margin:.2rem 0 .4rem">Home Server</h3>
+        <p>Dell Optiplex → RAID1 SSD + HDD, Cloudflare, Minecraft/Terraria services.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin:.2rem 0 .4rem">3D Printing</h3>
+        <p>Parametric parts, fixtures, enclosures. Clean profiles and strong prints.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SKILLS -->
+  <section class="section">
+    <h2 style="margin:0 0 10px;">Stack</h2>
+    <div class="chips">
+      <span>.NET</span><span>C#</span><span>ASP.NET Core</span><span>Cloudflare</span>
+      <span>Windows Server</span><span>PowerShell</span><span>Blender</span><span>PrusaSlicer</span>
+    </div>
+  </section>
+
+  <!-- RECENT / GALLERY TEASER (drop images later into wwwroot/resources/prints/) -->
+  <section class="section">
+    <h2 style="margin:0 0 10px;">Recent prints</h2>
+    <div class="grid prints">
+      <div class="card img"><img src="/resources/prints/FOX08452.jpg" alt="Print 1" onerror="this.closest('.card').classList.add('empty')" /></div>
+      <div class="card img"><img src="/resources/prints/FOX08537.jpg" alt="Print 2" onerror="this.closest('.card').classList.add('empty')" /></div>
+      <div class="card img"><img src="/resources/prints/FOX08573.jpg" alt="Print 3" onerror="this.closest('.card').classList.add('empty')" /></div>
+      <div class="card img"><img src="/resources/prints/FOX08732.jpg" alt="Print 3" onerror="this.closest('.card').classList.add('empty')" /></div>
+      <div class="card img"><img src="/resources/prints/FOX08836.jpg" alt="Print 3" onerror="this.closest('.card').classList.add('empty')" /></div>
+    </div>
+  </section>
+
+  <footer>© @DateTime.UtcNow.Year foxhint.com — built with ASP.NET Core</footer>
+</main>
+
+<style>
+/* page-specific sprinkles */
+.stats{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap}
+.stats>div{display:grid;gap:2px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#0f1624}
+
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips>span{padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:#0e1623}
+
+.grid.prints .card.img{padding:0;overflow:hidden}
+.grid.prints .card.img img{width:100%;height:160px;object-fit:cover;display:block}
+.grid.prints .card.empty{display:grid;place-items:center;color:var(--muted)}
+.grid.prints .card.empty::after{content:"Add images to /resources/prints";padding:20px}
+
+/* small fade-in on scroll */
+.reveal{opacity:0;transform:translateY(6px);transition:.35s ease}
+.reveal.on{opacity:1;transform:none}
+</style>
+
+@section Scripts {
+<script>
+// fade-in on scroll
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target)}}),{threshold:.12});
+document.querySelectorAll('.card, .hero, .stats>div, .chips>span').forEach(el=>{el.classList.add('reveal'); io.observe(el);});
+</script>
+}

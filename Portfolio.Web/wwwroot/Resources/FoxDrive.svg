@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="310" height="96" viewBox="0 0 310 96" role="img" aria-label="FoxDrive">
+  <defs>
+    <!-- same palettes -->
+    <linearGradient id="fox" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#ff7a18"/>
+      <stop offset="100%" stop-color="#c42412"/>
+    </linearGradient>
+    <linearGradient id="drive" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#5cc8ff"/>
+      <stop offset="100%" stop-color="#7c5cff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- one text run, same letter-spacing everywhere -->
+  <g transform="translate(0,6)" font-family="Poppins, Segoe UI, Arial, sans-serif"
+     font-weight="700" font-size="66" text-rendering="geometricPrecision">
+    <text x="0" y="70" letter-spacing=".02em">
+      <tspan fill="url(#fox)">Fox</tspan>
+      <!-- no extra word gap; dx controls the space before 'Drive' -->
+      <tspan dx="0" fill="url(#drive)">Drive</tspan>
+    </text>
+  </g>
+</svg>

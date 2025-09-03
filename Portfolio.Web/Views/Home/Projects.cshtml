@@ -1,0 +1,76 @@
+@{
+  ViewData["Title"] = "Projects — Foxhint";
+  // ---- Configure your projects here ----
+  var projects = new[] {
+    new {
+      Title = "FoxDrive",
+      Image = "foxdrive.svg", // /wwwroot/resources/Projects/foxdrive.jpg
+      Description = "Self-hosted OneDrive-style app with auth, sharing, thumbnails, drag & drop.",
+      Tech = new[] { "ASP.NET Core", "C#", "Cloudflare Tunnel" },
+      Github = "https://github.com/youruser/foxdrive",     // <-- change
+      Live   = "https://foxdrive.foxhint.com"              // optional
+    },
+    new {
+    Title = "Keypress Visualizer",
+    Image = "KeyVisualizer.png", // put this in wwwroot/resources/Projects/
+    Description = "Transparent, always-on-top overlay that shows keyboard & mouse input in real time. Groups combos into phrases and switches to text mode while typing.",
+    Tech = new[] { "Python", "PyQt5", "pynput" },
+    Github = "https://github.com/AdamDurinik/Widgets",
+    Live   = (string?)null
+    },
+  };
+}
+<header>
+  <img src="~/resources/Logo_color.svg" alt="Foxhint" />
+  <nav style="margin-left:auto; display:flex; gap:8px;">
+    <a class="btn" href="/">Home</a>
+    <a class="btn" href="/Home/Projects">Projects</a>
+    <a class="btn primary" href="/Home/Contact">Contact</a>
+  </nav>
+</header>
+
+<main>
+  <h1 style="margin:12px 0 14px;">Projects</h1>
+
+  <div class="grid projects">
+    @foreach (var p in projects)
+    {
+      var imgUrl = Url.Content($"~/resources/Projects/{p.Image}");
+      <article class="card project-card">
+        <div class="thumb">
+          <img src="@imgUrl" alt="@p.Title" onerror="this.closest('.thumb').classList.add('empty')" />
+        </div>
+        <div class="body">
+          <h3 style="margin:.2rem 0 .35rem">@p.Title</h3>
+          <p class="muted" style="margin:0 0 10px;">@p.Description</p>
+          <div class="chips" style="margin-bottom:10px;">
+            @foreach (var t in p.Tech) { <span>@t</span> }
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            @if (!string.IsNullOrWhiteSpace(p.Github))
+            {
+              <a class="btn" href="@p.Github" target="_blank" rel="noopener">GitHub</a>
+            }
+            @if (!string.IsNullOrWhiteSpace(p.Live))
+            {
+              <a class="btn primary" href="@p.Live" target="_blank" rel="noopener">Live demo</a>
+            }
+          </div>
+        </div>
+      </article>
+    }
+  </div>
+
+  <footer>© @DateTime.UtcNow.Year foxhint.com — built with ASP.NET Core</footer>
+</main>
+
+<style>
+/* Projects layout */
+.grid.projects{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.project-card{display:grid; grid-template-rows:auto 1fr; padding:0; overflow:hidden}
+.project-card .thumb{height:160px; background:#0e1623; border-bottom:1px solid var(--border)}
+.project-card .thumb img{width:100%; height:100%; object-fit:cover; display:block}
+.project-card .thumb.empty{display:grid; place-items:center; color:var(--muted)}
+.project-card .thumb.empty::after{content:"Add image to /resources/Projects"; padding:10px}
+.project-card .body{padding:12px}
+</style>

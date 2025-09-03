@@ -1,0 +1,53 @@
+@{
+    Layout = null;
+    var returnUrl = (string?)ViewData["ReturnUrl"] ?? "/";
+    var error = (string?)ViewData["Error"];
+}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sign in · FoxDrive</title>
+<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+<style>
+  body{display:grid;place-items:center;min-height:100vh}
+  .login{
+    width:min(420px,95vw);
+    background:linear-gradient(180deg,#101a2b,#0c1320);
+    border:1px solid var(--border); border-radius:14px;
+    box-shadow:0 20px 60px #00000088; overflow:hidden;
+  }
+  .login header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:#0b1422}
+  .login main{padding:16px}
+  .login label{display:block;margin-top:10px;margin-bottom:6px;color:var(--muted);font-size:13px}
+  .login input{
+    width:100%; padding:10px; border-radius:10px; border:1px solid var(--border);
+    background:#0f1624; color:var(--text);
+  }
+  .error{color:var(--danger); margin-top:8px}
+  .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+</style>
+</head>
+<body>
+  <form method="post" action="/auth/login" class="login">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="returnUrl" value="@returnUrl" />
+    <header>
+      <img src="/resources/Logo_color.svg" alt="FoxDrive" style="height:22px" />
+      <strong>Sign in</strong>
+    </header>
+    <main>
+      <label for="u">Username</label>
+      <input id="u" name="username" autofocus autocomplete="username" />
+      <label for="p">Password</label>
+      <input id="p" name="password" type="password" autocomplete="current-password" />
+      @if(!string.IsNullOrEmpty(error)){ <div class="error">@error</div> }
+      <div class="actions">
+        <a class="btn" href="/">Cancel</a>
+        <button class="btn primary" type="submit">Sign in</button>
+      </div>
+    </main>
+  </form>
+</body>
+</html>

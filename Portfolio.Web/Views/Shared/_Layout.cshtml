@@ -1,0 +1,18 @@
+﻿@{
+    Layout = null;
+    var title = ViewData["Title"] as string ?? "Foxhint — Portfolio";
+}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>@title</title>
+  <link rel="icon" href="~/Resources/Logo_color.svg" />
+  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+  @RenderBody()
+  @RenderSection("Scripts", required: false)
+</body>
+</html>

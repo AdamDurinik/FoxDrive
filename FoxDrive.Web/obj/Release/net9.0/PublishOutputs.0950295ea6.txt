@@ -1,0 +1,7 @@
+D:\FoxDrive\Depoly\FoxDrive.Web\FoxDrive.Web.exe
+D:\FoxDrive\Depoly\FoxDrive.Web\appsettings.Development.json
+D:\FoxDrive\Depoly\FoxDrive.Web\appsettings.json
+D:\FoxDrive\Depoly\FoxDrive.Web\FoxDrive.Web.dll
+D:\FoxDrive\Depoly\FoxDrive.Web\FoxDrive.Web.deps.json
+D:\FoxDrive\Depoly\FoxDrive.Web\FoxDrive.Web.runtimeconfig.json
+D:\FoxDrive\Depoly\FoxDrive.Web\FoxDrive.Web.pdb

@@ -1,0 +1,7 @@
+D:\FoxDrive\Depoly\Portfolio.Web\Portfolio.Web.exe
+D:\FoxDrive\Depoly\Portfolio.Web\appsettings.Development.json
+D:\FoxDrive\Depoly\Portfolio.Web\appsettings.json
+D:\FoxDrive\Depoly\Portfolio.Web\Portfolio.Web.dll
+D:\FoxDrive\Depoly\Portfolio.Web\Portfolio.Web.deps.json
+D:\FoxDrive\Depoly\Portfolio.Web\Portfolio.Web.runtimeconfig.json
+D:\FoxDrive\Depoly\Portfolio.Web\Portfolio.Web.pdb

@@ -1,0 +1,316 @@
+﻿@{
+    ViewData["Title"] = "FoxDrive";
+}
+<header>
+  <img src="/resources/FoxDrive.svg" alt="FoxDrive" />
+  <span class="badge">beta</span>
+  <div style="margin-left:auto; display:flex; gap:8px;">
+    <input id="fileInput" type="file" multiple hidden />
+    <button class="btn primary" onclick="document.getElementById('fileInput').click()">Upload</button>
+    <button class="btn" id="newFolderBtn">New folder</button>
+    <button class="btn" onclick="refresh()">Refresh</button>
+    <form method="post" action="/auth/logout">
+        @Html.AntiForgeryToken()
+        <button class="btn" type="submit">Logout</button>
+    </form>
+
+  </div>
+</header>
+
+<main class="layout">
+  <aside id="left">
+    <button class="btn" onclick="setPath('')">My files</button>
+    <button class="btn" onclick="setPath('@@shared')">Shared</button>
+    <h3>Favorites</h3>
+    <div class="favs" id="favorites"></div>
+    <hr style="border:0; border-top:1px solid var(--border); margin:12px 0;">
+    <h3>Navigation</h3>
+    <div id="breadcrumbs"></div>
+  </aside>
+
+  <section>
+    <div id="dropzone">Drop files here to upload</div>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+
+<!-- Context menu -->
+<div id="ctx" class="ctx"></div>
+
+<!-- New Folder Modal -->
+<div id="newFolderModal" class="modal" style="display:none">
+  <div class="box">
+    <header class="row" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:#0b1422">
+      <strong>New folder</strong>
+      <button class="btn" style="margin-left:auto" type="button" onclick="closeNewFolder()">✖</button>
+    </header>
+    <div style="padding:14px">
+      <label for="newFolderName" class="muted" style="display:block;margin-bottom:6px">Folder name</label>
+      <input id="newFolderName" type="text" placeholder="e.g. Photos"
+             style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:#0f1624;color:var(--text)" />
+      <div id="newFolderErr" class="muted" style="color:var(--danger);margin-top:6px;display:none"></div>
+    </div>
+    <footer style="display:flex;gap:8px;justify-content:flex-end;padding:10px 12px;border-top:1px solid var(--border);background:#0b1422">
+      <button class="btn" type="button" onclick="closeNewFolder()">Cancel</button>
+      <button class="btn primary" id="createFolderBtn" type="button" onclick="submitNewFolder()">Create</button>
+    </footer>
+  </div>
+</div>
+
+
+@section Scripts {
+<script>
+// ---------- API ----------
+const api = {
+  list:  (path="") => fetch(`/api/list?${new URLSearchParams({path})}`).then(r=>r.json()),
+  mkdir: (path,name)=> fetch(`/api/mkdir?${new URLSearchParams({path,name})}`, {method:'POST'}),
+  upload:(path,form)=> fetch(`/api/upload?${new URLSearchParams({path})}`, {method:'POST', body:form}),
+  download:(path,name)=> `/api/download?${new URLSearchParams({path,name})}`,
+  open:  (path,name)=> `/api/open?${new URLSearchParams({path,name})}`,
+  del:   (path,name)=> fetch(`/api/delete?${new URLSearchParams({path,name})}`, {method:'DELETE'}),
+  rename:(path,from,to)=> fetch(`/api/rename?${new URLSearchParams({path,from,to})}`, {method:'POST'}),
+  move:  (body)=> fetch('/api/move', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}),
+};
+
+// ---------- State ----------
+let currentPath = ""; // e.g. "A/B"
+const grid   = document.getElementById('grid');
+const ctx    = document.getElementById('ctx');
+const favsEl = document.getElementById('favorites');
+
+// ---------- Favorites (localStorage) ----------
+const FKEY = 'foxdrive.favorites';
+function getFavs(){ try { return JSON.parse(localStorage.getItem(FKEY)||'[]'); } catch { return []; } }
+function setFavs(arr){ localStorage.setItem(FKEY, JSON.stringify([...new Set(arr)])); renderFavs(); }
+function toggleFav(path){ const favs=getFavs(); const i=favs.indexOf(path); if(i>=0) favs.splice(i,1); else favs.push(path); setFavs(favs); }
+function isFav(path){ return getFavs().includes(path); }
+function renderFavs(){
+  const favs = getFavs(); favsEl.innerHTML='';
+  if(!favs.length){ const m=document.createElement('div'); m.className='muted'; m.textContent='No favorites yet.'; favsEl.appendChild(m); return; }
+  favs.forEach(p=>{
+    const div=document.createElement('div'); div.className='fav'; div.title=p||'/';
+    const star=document.createElement('span'); star.textContent='★';
+    const lab=document.createElement('span'); lab.textContent=p||'/';
+    div.appendChild(star); div.appendChild(lab);
+    div.onclick=()=> setPath(p);
+    favsEl.appendChild(div);
+  });
+}
+
+// ---------- Helpers ----------
+const fmtSize = n => n==null ? "" :
+  n<1024 ? `${n} B` :
+  n<1048576 ? `${(n/1024).toFixed(1)} KB` :
+  n<1073741824 ? `${(n/1048576).toFixed(1)} MB` : `${(n/1073741824).toFixed(2)} GB`;
+
+function join(base, name){ base=(base||"").replace(/^\/+|\/+$/g,''); return base ? `${base}/${name}` : name; }
+
+function setPath(p){
+  currentPath = (p||"").replace(/^\/+|\/+$/g,'');
+  location.hash = encodeURIComponent(currentPath);
+  renderCrumbs();
+  refresh();
+}
+
+function renderCrumbs(){
+  const el = document.getElementById('breadcrumbs'); el.innerHTML='';
+  const parts = currentPath ? currentPath.split('/') : [];
+  let acc = '';
+  const mk = (label,p) => { const b=document.createElement('button'); b.className='btn'; b.textContent=label; b.onclick=()=>setPath(p); return b; };
+  el.appendChild(mk('FoxDrive',''));
+  parts.forEach(part=>{ acc = join(acc, part); el.appendChild(mk(part, acc)); });
+}
+
+// ---------- Context menu ----------
+function showCtx(x,y,items){
+  ctx.innerHTML='';
+  items.forEach(i=>{
+    if(i.href){
+      const a=document.createElement('a'); a.href=i.href; a.textContent=i.text; a.target=i.target||'_self'; ctx.appendChild(a);
+    } else {
+      const b=document.createElement('button'); b.textContent=i.text; b.onclick=()=>{ hideCtx(); i.onClick&&i.onClick(); }; ctx.appendChild(b);
+    }
+  });
+  ctx.style.left = x+'px'; ctx.style.top = y+'px';
+  ctx.classList.add('show');
+}
+function hideCtx(){ ctx.classList.remove('show'); }
+document.addEventListener('click', hideCtx);
+document.addEventListener('contextmenu', e=>{
+  if(e.target.closest('.card')) e.preventDefault(); // only block on our tiles
+});
+
+// ---------- Rendering ----------
+function isImage(name){
+  const ext=(name.split('.').pop()||'').toLowerCase();
+  return ['png','jpg','jpeg','gif','webp','bmp','avif','svg'].includes(ext);
+}
+
+async function refresh(){
+  const items = await api.list(currentPath);
+  grid.innerHTML='';
+
+  const folders = items.filter(i=>i.kind===1);
+  const files   = items.filter(i=>i.kind===0);
+
+  [...folders, ...files].forEach(it=>{
+    const card = document.createElement('div');
+    card.className='card'; card.draggable=true;
+
+    // Thumbnail area
+    const thumb = document.createElement('div'); thumb.className='thumb';
+    if (it.kind===1){
+      const img=document.createElement('img'); img.src='/resources/folder.png'; img.className='folder';
+      thumb.appendChild(img);
+    } else if (isImage(it.name)) {
+      const img=document.createElement('img'); img.src=api.open(currentPath, it.name);
+      thumb.appendChild(img);
+    } else {
+      // light placeholder using folder icon
+      const img=document.createElement('img'); img.src='/resources/folder.png'; img.style.opacity='.25'; img.className='folder';
+      thumb.appendChild(img);
+    }
+
+    // Title + meta
+    const title=document.createElement('div'); title.className='title'; title.textContent=it.name;
+    const meta=document.createElement('div'); meta.className='meta';
+    meta.textContent = it.kind===1 ? 'Folder' : `${fmtSize(it.size)} • ${new Date(it.lastModified).toLocaleString()}`;
+
+    // Context menu button
+    const more=document.createElement('button'); more.className='btn'; more.textContent='⋯';
+    more.style.position='absolute'; more.style.right='10px'; more.style.top='10px';
+    more.onclick=(e)=>{
+      e.stopPropagation();
+      const x=e.clientX, y=e.clientY; const menu=[];
+      if(it.kind===1){
+        menu.push({text:'Open', onClick:()=> setPath(join(currentPath, it.name))});
+        const p=join(currentPath,it.name);
+        menu.push({text: isFav(p)?'Remove from favorites':'Add to favorites', onClick:()=> toggleFav(p)});
+      }else{
+        menu.push({text:'Open', href: api.open(currentPath, it.name), target:'_blank'});
+        menu.push({text:'Download', href: api.download(currentPath, it.name)});
+      }
+      menu.push({text:'Rename', onClick: async ()=>{
+        const to=prompt('New name:', it.name); if(!to||to===it.name) return;
+        const r=await api.rename(currentPath,it.name,to); if(!r.ok) alert(await r.text()); refresh();
+      }});
+      menu.push({text:'Delete', onClick: async ()=>{
+        if(!confirm(`Delete "${it.name}"?`)) return;
+        const r=await api.del(currentPath,it.name); if(!r.ok) alert(await r.text()); refresh();
+      }});
+      showCtx(x,y,menu);
+    };
+
+    // Click / drag behavior
+    card.onclick=()=>{ if(it.kind===1) setPath(join(currentPath,it.name)); else window.open(api.open(currentPath,it.name),'_blank'); };
+    card.addEventListener('dragstart', e=>{
+      e.dataTransfer.setData('application/x-foxdrive', JSON.stringify({ name: it.name, fromPath: currentPath }));
+      e.dataTransfer.effectAllowed='move';
+    });
+    if(it.kind===1){
+      card.addEventListener('dragover', e=>{
+        if(e.dataTransfer.types.includes('application/x-foxdrive')){ e.preventDefault(); card.classList.add('drag-target'); }
+      });
+      card.addEventListener('dragleave', ()=> card.classList.remove('drag-target'));
+      card.addEventListener('drop', async e=>{
+        card.classList.remove('drag-target');
+        const payload=e.dataTransfer.getData('application/x-foxdrive'); if(!payload) return;
+        const data=JSON.parse(payload); const toPath=join(currentPath,it.name);
+        if(data.fromPath===toPath) return;
+        const r=await api.move({fromPath:data.fromPath,name:data.name,toPath}); if(!r.ok) alert(await r.text());
+        refresh();
+      });
+    }
+
+    // Compose tile
+    card.appendChild(thumb);
+    card.appendChild(title);
+    card.appendChild(meta);
+    card.appendChild(more);
+    grid.appendChild(card);
+
+    // Right-click opens the same menu
+    card.addEventListener('contextmenu', e=>{ e.preventDefault(); more.onclick(e); });
+  });
+
+  renderFavs();
+}
+
+// ---------- Uploads & Dropzone ----------
+document.getElementById('fileInput').addEventListener('change', e=>{
+  const files=e.target.files; if(!files||!files.length) return;
+  const form=new FormData(); [...files].forEach(f=> form.append('file', f, f.name));
+  api.upload(currentPath, form).then(()=> refresh());
+});
+
+// --- New Folder modal ---
+const newFolderModal = document.getElementById('newFolderModal');
+const newFolderInput = document.getElementById('newFolderName');
+const newFolderErr   = document.getElementById('newFolderErr');
+const createFolderBtn= document.getElementById('createFolderBtn');
+
+function openNewFolder(){
+  newFolderErr.style.display='none';
+  newFolderErr.textContent='';
+  newFolderInput.value='';
+  newFolderModal.classList.add('show');
+  newFolderModal.style.display='flex';
+  setTimeout(()=> newFolderInput.focus(), 0);
+}
+
+function closeNewFolder(){
+  newFolderModal.classList.remove('show');
+  newFolderModal.style.display='none';
+}
+
+async function submitNewFolder(){
+  const name = (newFolderInput.value||'').trim();
+  if(!name){ newFolderErr.textContent='Please enter a folder name.'; newFolderErr.style.display='block'; newFolderInput.focus(); return; }
+  createFolderBtn.disabled = true;
+  const r = await api.mkdir(currentPath, name);
+  createFolderBtn.disabled = false;
+  if(!r.ok){
+    newFolderErr.textContent = await r.text();
+    newFolderErr.style.display='block';
+    return;
+  }
+  closeNewFolder();
+  refresh();
+}
+
+// Open on button click
+document.getElementById('newFolderBtn').addEventListener('click', openNewFolder);
+
+// Enter = submit, Escape = close
+newFolderInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') submitNewFolder();
+  else if(e.key === 'Escape') closeNewFolder();
+});
+newFolderModal.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape') closeNewFolder();
+});
+
+
+const dz=document.getElementById('dropzone');
+['dragenter','dragover'].forEach(ev=> dz.addEventListener(ev, e=>{
+  if ([...e.dataTransfer.items||[]].some(i=> i.kind==='file')) { e.preventDefault(); dz.classList.add('drag'); }
+}));
+['dragleave','drop'].forEach(ev=> dz.addEventListener(ev, e=>{ e.preventDefault(); dz.classList.remove('drag'); }));
+dz.addEventListener('drop', e=>{
+  const files=e.dataTransfer.files; if(!files||!files.length) return;
+  const form=new FormData(); [...files].forEach(f=> form.append('file', f, f.name));
+  api.upload(currentPath, form).then(()=> refresh());
+});
+
+// ---------- Boot ----------
+(function init(){
+  const hash=decodeURIComponent(location.hash.slice(1));
+  if (hash) currentPath=hash;
+  renderCrumbs();
+  renderFavs();
+  refresh();
+})();
+
+
+</script>
+}
