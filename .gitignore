@@ -1,0 +1,5 @@
+Depoly
+Data
+*.db
+*.db-shm
+*.db-wal
