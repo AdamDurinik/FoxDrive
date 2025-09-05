@@ -3,3 +3,5 @@ Data
 *.db
 *.db-shm
 *.db-wal
+Debug
+Release

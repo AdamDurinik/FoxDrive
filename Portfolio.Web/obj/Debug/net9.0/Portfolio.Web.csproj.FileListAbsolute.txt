@@ -140,3 +140,4 @@ D:\FoxDrive\Portfolio.Web\bin\Debug\net9.0\runtimes\win-x64\native\e_sqlite3.dll
 D:\FoxDrive\Portfolio.Web\bin\Debug\net9.0\runtimes\win-x86\native\e_sqlite3.dll
 D:\FoxDrive\Portfolio.Web\obj\Debug\net9.0\Portfolio.Web.csproj.AssemblyReference.cache
 D:\FoxDrive\Portfolio.Web\obj\Debug\net9.0\Portfoli.3BFC0969.Up2Date
+D:\FoxDrive\Portfolio.Web\obj\Debug\net9.0\Portfolio.Web.sourcelink.json

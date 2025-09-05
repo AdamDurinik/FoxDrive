@@ -2,6 +2,7 @@ using FoxDrive.Web.Models;
 using FoxDrive.Web.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using System.Security.Claims;
 
 namespace FoxDrive.Web.Controllers
@@ -45,6 +46,11 @@ namespace FoxDrive.Web.Controllers
             var rel = string.Join('/', parts.Skip(2));
             return (fromUser, rel, true);
         }
+        private static string GetContentType(string fileName)
+        {
+            var provider = new FileExtensionContentTypeProvider();
+            return provider.TryGetContentType(fileName, out var ct) ? ct : "application/octet-stream";
+        }
 
         [HttpGet("list")]
         public ActionResult<IEnumerable<FileEntry>> List([FromQuery] string? path = "")
@@ -77,53 +83,127 @@ namespace FoxDrive.Web.Controllers
             return NoContent();
         }
 
-        [HttpPost("upload")]
-        public IActionResult Upload([FromQuery] string? path, List<IFormFile> file)
+        [HttpPost("upload/chunk")]
+        [DisableRequestSizeLimit] // each chunk is small anyway (e.g., 8–16 MB)
+        public async Task<IActionResult> UploadChunk(
+            [FromQuery] string? path,
+            [FromQuery] string fileName,
+            [FromQuery] string uploadId,
+            [FromQuery] int index,              
+            [FromQuery] int total,            
+            IFormFile chunk)
         {
-            var (owner, rel, _) = Resolve(path);
-            if (!_shares.CanWrite(CurrentUser, owner, rel)) return Forbid();
+            if (string.IsNullOrWhiteSpace(fileName) || string.IsNullOrWhiteSpace(uploadId))
+                return BadRequest("Missing fileName/uploadId.");
+            if (index < 0 || total <= 0 || index >= total)
+                return BadRequest("Bad index/total.");
+            if (chunk == null || chunk.Length == 0)
+                return BadRequest("Empty chunk.");
 
-            if (file == null || file.Count == 0) return BadRequest("No file(s)");
-            foreach (var f in file)
+            var (owner, rel, _) = Resolve(path);
+            if (!_shares.CanWrite(CurrentUser, owner, rel ?? "")) return Forbid();
+
+            // Save to a temp folder under the target dir: <target>/.uploads/<uploadId>/
+            var tmpRel   = Path.Combine(rel ?? "", ".uploads", uploadId);
+            var tmpAbs   = _storage.MapToAbsolute(owner, tmpRel);
+            Directory.CreateDirectory(tmpAbs);
+
+            var partName = $"{index:D6}.part";
+            var partAbs  = Path.Combine(tmpAbs, partName);
+
+            // Write this chunk
+            await using (var fs = System.IO.File.Create(partAbs))
             {
-                using var s = f.OpenReadStream();
-                _storage.Save(owner, Path.Combine(rel, f.FileName), s);
+                await chunk.CopyToAsync(fs);
             }
+
+            // If not last chunk, return now
+            if (index != total - 1) return NoContent();
+
+            // Last chunk received -> assemble
+            var targetRel = Path.Combine(rel ?? "", fileName);
+            var targetAbs = _storage.MapToAbsolute(owner, targetRel);
+            Directory.CreateDirectory(Path.GetDirectoryName(targetAbs)!);
+
+            await using (var output = new FileStream(targetAbs, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 128, useAsync: true))
+            {
+                for (int i = 0; i < total; i++)
+                {
+                    var partPath = Path.Combine(tmpAbs, $"{i:D6}.part");
+                    if (!System.IO.File.Exists(partPath))
+                        return StatusCode(StatusCodes.Status500InternalServerError, $"Missing chunk {i}.");
+                    await using var input = new FileStream(partPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 128, useAsync: true);
+                    await input.CopyToAsync(output);
+                }
+            }
+
+            // Cleanup temp
+            try { Directory.Delete(tmpAbs, recursive: true); } catch { /* TODO:logging*/ }
+
             return NoContent();
         }
 
+
+        // [HttpGet("download")]
+        // public IActionResult Download([FromQuery] string? path, [FromQuery] string name)
+        // {
+        //     var (owner, rel, _) = Resolve(path);
+        //     var fullRel = Path.Combine(rel, name);
+        //     if (!_shares.CanRead(CurrentUser, owner, fullRel)) return Forbid();
+
+        //     var stream = _storage.Read(owner, fullRel);
+        //     return File(stream, "application/octet-stream", name);
+        // }
+
+        // [HttpGet("open")]
+        // public IActionResult Open([FromQuery] string? path, [FromQuery] string name)
+        // {
+        //     var (owner, rel, _) = Resolve(path);
+        //     var fullRel = Path.Combine(rel, name);
+        //     if (!_shares.CanRead(CurrentUser, owner, fullRel)) return Forbid();
+
+        //     var ext = Path.GetExtension(name).ToLowerInvariant();
+        //     var mime = ext switch
+        //     {
+        //         ".png" => "image/png",
+        //         ".jpg" or ".jpeg" => "image/jpeg",
+        //         ".gif" => "image/gif",
+        //         ".webp" => "image/webp",
+        //         ".svg" => "image/svg+xml",
+        //         ".bmp" => "image/bmp",
+        //         ".pdf" => "application/pdf",
+        //         _ => "application/octet-stream"
+        //     };
+
+        //     var stream = _storage.Read(owner, fullRel);
+        //     return File(stream, mime);
+        // }
         [HttpGet("download")]
         public IActionResult Download([FromQuery] string? path, [FromQuery] string name)
         {
             var (owner, rel, _) = Resolve(path);
-            var fullRel = Path.Combine(rel, name);
+            var fullRel = Path.Combine(rel ?? "", name);
             if (!_shares.CanRead(CurrentUser, owner, fullRel)) return Forbid();
 
-            var stream = _storage.Read(owner, fullRel);
-            return File(stream, "application/octet-stream", name);
+            var abs = _storage.MapToAbsolute(owner, fullRel);
+            if (!System.IO.File.Exists(abs)) return NotFound();
+
+            // ✅ Range support (resume/seek) enabled here
+            return PhysicalFile(abs, GetContentType(name), fileDownloadName: name, enableRangeProcessing: true);
         }
 
         [HttpGet("open")]
         public IActionResult Open([FromQuery] string? path, [FromQuery] string name)
         {
             var (owner, rel, _) = Resolve(path);
-            var fullRel = Path.Combine(rel, name);
+            var fullRel = Path.Combine(rel ?? "", name);
             if (!_shares.CanRead(CurrentUser, owner, fullRel)) return Forbid();
 
-            var ext = Path.GetExtension(name).ToLowerInvariant();
-            var mime = ext switch
-            {
-                ".png" => "image/png",
-                ".jpg" or ".jpeg" => "image/jpeg",
-                ".gif" => "image/gif",
-                ".webp" => "image/webp",
-                ".svg" => "image/svg+xml",
-                ".bmp" => "image/bmp",
-                _ => "application/octet-stream"
-            };
+            var abs = _storage.MapToAbsolute(owner, fullRel);
+            if (!System.IO.File.Exists(abs)) return NotFound();
 
-            var stream = _storage.Read(owner, fullRel);
-            return File(stream, mime);
+            // also enable range for inline previews (images/video/pdf seeking)
+            return PhysicalFile(abs, GetContentType(name),fileDownloadName: name, enableRangeProcessing: true);
         }
 
         [HttpDelete("delete")]

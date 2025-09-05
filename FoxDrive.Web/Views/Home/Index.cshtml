@@ -65,6 +65,13 @@ const api = {
   list:  (path="") => fetch(`/api/list?${new URLSearchParams({path})}`).then(r=>r.json()),
   mkdir: (path,name)=> fetch(`/api/mkdir?${new URLSearchParams({path,name})}`, {method:'POST'}),
   upload:(path,form)=> fetch(`/api/upload?${new URLSearchParams({path})}`, {method:'POST', body:form}),
+  uploadChunk:(path, fileName, uploadId, index, total, blob) => {
+    const qs = new URLSearchParams({ path, fileName, uploadId, index, total });
+    const form = new FormData();
+    form.append('chunk', blob, `${fileName}.part${index}`);
+    return fetch(`/api/upload/chunk?${qs}`, { method: 'POST', body: form });
+  },
+
   download:(path,name)=> `/api/download?${new URLSearchParams({path,name})}`,
   open:  (path,name)=> `/api/open?${new URLSearchParams({path,name})}`,
   del:   (path,name)=> fetch(`/api/delete?${new URLSearchParams({path,name})}`, {method:'DELETE'}),
@@ -235,13 +242,69 @@ async function refresh(){
 
   renderFavs();
 }
+async function uploadLargeFile(path, file, onProgress){
+  const CHUNK = 8 * 1024 * 1024; // 8 MB per request (well under Cloudflare 100 MB)
+  const total = Math.ceil(file.size / CHUNK);
+  const uploadId = (crypto.randomUUID && crypto.randomUUID()) || (Date.now() + '-' + Math.random().toString(16).slice(2));
+
+  for (let i = 0; i < total; i++){
+    const start = i * CHUNK;
+    const end   = Math.min(start + CHUNK, file.size);
+    const blob  = file.slice(start, end);
+
+    const r = await api.uploadChunk(currentPath, file.name, uploadId, i, total, blob);
+    if (!r.ok) throw new Error(await r.text());
+
+    onProgress && onProgress(end, file.size);
+  }
+}
+
+async function uploadFiles(fileList){
+  const files = [...fileList];
+
+  // make a little progress area inside the dropzone if it doesn’t exist
+  const dz = document.getElementById('dropzone');
+  let wrap = document.getElementById('uploads');
+  if (!wrap) { wrap = document.createElement('div'); wrap.id = 'uploads'; dz.appendChild(wrap); }
+  wrap.style.display = 'block';
+
+  for (const f of files){
+    const row = document.createElement('div');
+    row.className = 'muted';
+    row.textContent = `Uploading ${f.name} (0%)`;
+    wrap.prepend(row);
+
+    try {
+      if (f.size <= 95 * 1024 * 1024) {
+        // small file -> existing endpoint
+        const form = new FormData();
+        form.append('file', f, f.name);
+        const r = await api.upload(currentPath, form);
+        if (!r.ok) throw new Error(await r.text());
+        row.textContent = `Uploaded ${f.name} ✔`;
+      } else {
+        // big file -> chunked
+        await uploadLargeFile(currentPath, f, (done, total) => {
+          const pct = Math.max(1, Math.floor((done / total) * 100));
+          row.textContent = `Uploading ${f.name} (${pct}%)`;
+        });
+        row.textContent = `Uploaded ${f.name} ✔`;
+      }
+    } catch (err) {
+      row.textContent = `Failed ${f.name}: ${err}`;
+    }
+  }
+
+  await refresh(); // update grid
+}
 
 // ---------- Uploads & Dropzone ----------
-document.getElementById('fileInput').addEventListener('change', e=>{
-  const files=e.target.files; if(!files||!files.length) return;
-  const form=new FormData(); [...files].forEach(f=> form.append('file', f, f.name));
-  api.upload(currentPath, form).then(()=> refresh());
+document.getElementById('fileInput').addEventListener('change', async (e)=>{
+  const files = e.target.files; if (!files || !files.length) return;
+  await uploadFiles(files);
+  e.target.value = '';
 });
+
 
 // --- Folder modal ---
 const newFolderModal = document.getElementById('newFolderModal');
@@ -296,10 +359,9 @@ const dz=document.getElementById('dropzone');
   if ([...e.dataTransfer.items||[]].some(i=> i.kind==='file')) { e.preventDefault(); dz.classList.add('drag'); }
 }));
 ['dragleave','drop'].forEach(ev=> dz.addEventListener(ev, e=>{ e.preventDefault(); dz.classList.remove('drag'); }));
-dz.addEventListener('drop', e=>{
-  const files=e.dataTransfer.files; if(!files||!files.length) return;
-  const form=new FormData(); [...files].forEach(f=> form.append('file', f, f.name));
-  api.upload(currentPath, form).then(()=> refresh());
+dz.addEventListener('drop', async (e)=>{
+  const files = e.dataTransfer.files; if (!files || !files.length) return;
+  await uploadFiles(files);
 });
 
 // ---------- Boot ----------

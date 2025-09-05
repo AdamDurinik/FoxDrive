@@ -222,3 +222,4 @@ D:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\tr\Microsoft.CodeAnalysis.Workspaces.M
 D:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 D:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 D:\FoxDrive\FoxDrive.Web\obj\Debug\net9.0\compressed\wszk94orzp-uyb5c3tpwx.gz
+D:\FoxDrive\FoxDrive.Web\obj\Debug\net9.0\FoxDrive.Web.sourcelink.json

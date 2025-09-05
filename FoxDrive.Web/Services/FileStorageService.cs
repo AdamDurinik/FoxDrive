@@ -28,6 +28,16 @@ namespace FoxDrive.Web.Services
             return combined;
         }
 
+        public string MapToAbsolute(string owner, string relativePath)
+        {
+            var basePath = Path.GetFullPath(Path.Combine("D:\\FoxDrive\\Data\\users", owner ?? ""));
+            var abs = Path.GetFullPath(Path.Combine(basePath, relativePath ?? ""));
+            if (!abs.StartsWith(basePath, StringComparison.OrdinalIgnoreCase))
+                throw new IOException("Path traversal outside of owner root.");
+            return abs;
+        }
+
+
         public IEnumerable<FileEntry> List(string ownerUser, string? relativePath = "")
         {
             var path = MapPath(ownerUser, relativePath);
