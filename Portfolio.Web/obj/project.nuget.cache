@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "jCvT55VXXaY=",
+  "dgSpecHash": "KhxPrmb01vg=",
   "success": true,
-  "projectFilePath": "D:\\FoxDrive\\Portfolio.Web\\Portfolio.Web.csproj",
+  "projectFilePath": "F:\\FoxDrive\\Portfolio.Web\\Portfolio.Web.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Workshop\\.nuget\\packages\\microsoft.data.sqlite\\9.0.8\\microsoft.data.sqlite.9.0.8.nupkg.sha512",
     "C:\\Users\\Workshop\\.nuget\\packages\\microsoft.data.sqlite.core\\9.0.8\\microsoft.data.sqlite.core.9.0.8.nupkg.sha512",

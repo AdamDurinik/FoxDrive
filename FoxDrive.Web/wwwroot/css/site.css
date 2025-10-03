@@ -56,6 +56,9 @@ aside#left h3{margin:4px 0 10px; font-size:13px; color:var(--muted); letter-spac
 }
 #dropzone.drag{background:#0e1a2b; outline-color:var(--accent); transform:scale(1.01)}
 
+/* reuse your modal look */
+.modal.show{ display:flex !important; }
+
 /* grid tiles (folder/file) */
 .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px}
 .card{

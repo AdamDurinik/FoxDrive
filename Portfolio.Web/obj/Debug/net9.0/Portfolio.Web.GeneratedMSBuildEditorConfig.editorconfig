@@ -9,49 +9,49 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = Portfolio.Web
 build_property.RootNamespace = Portfolio.Web
-build_property.ProjectDir = D:\FoxDrive\Portfolio.Web\
+build_property.ProjectDir = F:\FoxDrive\Portfolio.Web\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.RazorLangVersion = 9.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
-build_property.MSBuildProjectDirectory = D:\FoxDrive\Portfolio.Web
+build_property.MSBuildProjectDirectory = F:\FoxDrive\Portfolio.Web
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 9.0
 build_property.EnableCodeStyleSeverity = 
 
-[D:/FoxDrive/Portfolio.Web/Views/Home/Contact.cshtml]
+[F:/FoxDrive/Portfolio.Web/Views/Home/Contact.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxDb250YWN0LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/FoxDrive/Portfolio.Web/Views/Home/Index.cshtml]
+[F:/FoxDrive/Portfolio.Web/Views/Home/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/FoxDrive/Portfolio.Web/Views/Home/Privacy.cshtml]
+[F:/FoxDrive/Portfolio.Web/Views/Home/Privacy.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxQcml2YWN5LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/FoxDrive/Portfolio.Web/Views/Home/Projects.cshtml]
+[F:/FoxDrive/Portfolio.Web/Views/Home/Projects.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxQcm9qZWN0cy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/FoxDrive/Portfolio.Web/Views/Shared/Error.cshtml]
+[F:/FoxDrive/Portfolio.Web/Views/Shared/Error.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXEVycm9yLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/FoxDrive/Portfolio.Web/Views/Shared/_ValidationScriptsPartial.cshtml]
+[F:/FoxDrive/Portfolio.Web/Views/Shared/_ValidationScriptsPartial.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/FoxDrive/Portfolio.Web/Views/_ViewImports.cshtml]
+[F:/FoxDrive/Portfolio.Web/Views/_ViewImports.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/FoxDrive/Portfolio.Web/Views/_ViewStart.cshtml]
+[F:/FoxDrive/Portfolio.Web/Views/_ViewStart.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdTdGFydC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/FoxDrive/Portfolio.Web/Views/Shared/_Layout.cshtml]
+[F:/FoxDrive/Portfolio.Web/Views/Shared/_Layout.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9MYXlvdXQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = b-un7kwxfodm

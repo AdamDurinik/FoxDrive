@@ -4,6 +4,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
 using System.Security.Claims;
+using System.Diagnostics;
+using System.Security.Cryptography;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Hosting;
+
 
 namespace FoxDrive.Web.Controllers
 {
@@ -12,13 +18,86 @@ namespace FoxDrive.Web.Controllers
     [Authorize]
     public class DriveController : ControllerBase
     {
+        private readonly string _ffmpegPath;
+        private readonly string _hlsCache;
+
         private readonly FileStorageService _storage;
         private readonly SharesService _shares;
 
-        public DriveController(FileStorageService storage, SharesService shares)
+        public DriveController(
+            FileStorageService storage,
+            SharesService shares,
+            IConfiguration config,
+            IWebHostEnvironment env)
         {
             _storage = storage;
-            _shares = shares;
+            _shares  = shares;
+
+            _ffmpegPath = config["Streaming:FfmpegPath"] ?? "ffmpeg"; // or full path to ffmpeg.exe
+            _hlsCache   = config["Streaming:CacheDir"]
+                        ?? Path.Combine(env.ContentRootPath, "Data", "streamcache");
+
+            Directory.CreateDirectory(_hlsCache);
+        }
+
+        private static string HashKey(string s)
+        {
+            using var sha = SHA256.Create();
+            var b = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(s));
+            return Convert.ToHexString(b).ToLowerInvariant();
+        }
+
+        private string HlsDirForAbsolute(string absPath)
+        {
+            return Path.Combine(_hlsCache, HashKey(absPath));
+        }
+
+        private void EnsureHlsBuilt(string absInput, string outDir)
+        {
+            var manifest = Path.Combine(outDir, "index.m3u8");
+            if (System.IO.File.Exists(manifest)) return;
+
+            var test = System.IO.File.Exists(manifest);
+            Directory.CreateDirectory(outDir);
+
+            var psi = new ProcessStartInfo {
+                FileName = _ffmpegPath,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = false,              // ❗ DO NOT REDIRECT (prevents blocking)
+                WorkingDirectory = outDir                   // logs and temp files land here
+            };
+
+            // Build args (VOD HLS)
+            psi.ArgumentList.Add("-hide_banner");
+            psi.ArgumentList.Add("-nostdin");
+            psi.ArgumentList.Add("-y");
+            psi.ArgumentList.Add("-loglevel"); psi.ArgumentList.Add("error");  // quiet unless error
+            psi.ArgumentList.Add("-report");                                   // ffmpeg-*.log in outDir
+            psi.ArgumentList.Add("-i");            psi.ArgumentList.Add(absInput);
+            psi.ArgumentList.Add("-map"); psi.ArgumentList.Add("0:v:0?");
+            psi.ArgumentList.Add("-map"); psi.ArgumentList.Add("0:a:0?");
+            psi.ArgumentList.Add("-c:v"); psi.ArgumentList.Add("libx264");
+            psi.ArgumentList.Add("-preset"); psi.ArgumentList.Add("veryfast");
+            psi.ArgumentList.Add("-crf"); psi.ArgumentList.Add("23");
+            psi.ArgumentList.Add("-c:a"); psi.ArgumentList.Add("aac");
+            psi.ArgumentList.Add("-b:a"); psi.ArgumentList.Add("128k");
+            psi.ArgumentList.Add("-ar"); psi.ArgumentList.Add("48000");
+            psi.ArgumentList.Add("-ac"); psi.ArgumentList.Add("2");
+            psi.ArgumentList.Add("-f"); psi.ArgumentList.Add("hls");
+            psi.ArgumentList.Add("-hls_time"); psi.ArgumentList.Add("4");
+            psi.ArgumentList.Add("-hls_list_size"); psi.ArgumentList.Add("0");
+            psi.ArgumentList.Add("-hls_flags"); psi.ArgumentList.Add("append_list+omit_endlist+independent_segments");
+            psi.ArgumentList.Add("-hls_playlist_type"); psi.ArgumentList.Add("event");
+            psi.ArgumentList.Add("-hls_segment_filename");
+            psi.ArgumentList.Add(Path.Combine(outDir, "seg%05d.ts"));
+            psi.ArgumentList.Add(Path.Combine(outDir, "index.m3u8"));
+
+
+            // Start ffmpeg in background (do NOT await; it will build in the cache)
+            Process.Start(psi);
+
+            // don't block—just return; caller will serve 202 until ready
         }
 
         private string CurrentUser => User.Identity?.Name ?? "unknown";
@@ -46,11 +125,99 @@ namespace FoxDrive.Web.Controllers
             var rel = string.Join('/', parts.Skip(2));
             return (fromUser, rel, true);
         }
+
         private static string GetContentType(string fileName)
         {
-            var provider = new FileExtensionContentTypeProvider();
-            return provider.TryGetContentType(fileName, out var ct) ? ct : "application/octet-stream";
+            var ext = Path.GetExtension(fileName).ToLowerInvariant();
+            return ext switch
+            {
+                ".mp4" => "video/mp4",
+                ".m4v" => "video/mp4",
+                ".webm" => "video/webm",
+                ".ogv" => "video/ogg",
+                ".mov" => "video/quicktime",
+                ".mkv" => "video/x-matroska",
+
+                ".mp3" => "audio/mpeg",
+                ".m4a" => "audio/mp4",
+                ".aac" => "audio/aac",
+                ".wav" => "audio/wav",
+                ".ogg" => "audio/ogg",
+                _ => new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider()
+                        .TryGetContentType(fileName, out var ct) ? ct : "application/octet-stream"
+            };
         }
+        [HttpGet("hls/manifest")]
+        public IActionResult HlsManifest([FromQuery] string? path, [FromQuery] string name)
+        {
+            var (owner, rel, _) = Resolve(path);
+            var fullRel = Path.Combine(rel ?? "", name);
+            if (!_shares.CanRead(CurrentUser, owner, fullRel)) return Forbid();
+
+            var abs = _storage.MapToAbsolute(owner, fullRel);
+            if (!System.IO.File.Exists(abs)) return NotFound();
+
+            var dir = HlsDirForAbsolute(abs);
+            EnsureHlsBuilt(abs, dir);
+
+            var manifestPath = Path.Combine(dir, "index.m3u8");
+
+            // If manifest doesn’t exist yet but at least one segment is ready, serve a minimal one
+            if (!System.IO.File.Exists(manifestPath))
+            {
+                var firstSeg = Directory.GetFiles(dir, "seg*.ts").OrderBy(f => f).FirstOrDefault();
+                if (firstSeg == null)
+                    return StatusCode(202, "Preparing stream...");
+
+                // Generate a temporary manifest that grows later
+                var tmp = new[]
+                {
+                    "#EXTM3U",
+                    "#EXT-X-VERSION:3",
+                    "#EXT-X-TARGETDURATION:4",
+                    "#EXT-X-MEDIA-SEQUENCE:0",
+                    "#EXTINF:4.0,",
+                    Path.GetFileName(firstSeg)
+                };
+
+                var textTmp = string.Join("\n", tmp);
+                return Content(textTmp, "application/vnd.apple.mpegurl");
+            }
+
+            var lines = System.IO.File.ReadAllLines(manifestPath);
+            
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var l = lines[i];
+                if (!l.StartsWith("#", StringComparison.Ordinal) &&
+                    l.EndsWith(".ts", StringComparison.OrdinalIgnoreCase))
+                {
+                    lines[i] = $"/api/hls/segment?path={Uri.EscapeDataString(path ?? "")}&name={Uri.EscapeDataString(name)}&file={Uri.EscapeDataString(l)}";
+                }
+            }
+            var text = string.Join("\n", lines);
+            return Content(text, "application/vnd.apple.mpegurl");
+        }
+
+        [HttpGet("hls/segment")]
+        public IActionResult HlsSegment([FromQuery] string? path, [FromQuery] string name, [FromQuery] string file)
+        {
+            var (owner, rel, _) = Resolve(path);
+            var fullRel = Path.Combine(rel ?? "", name);
+            if (!_shares.CanRead(CurrentUser, owner, fullRel)) return Forbid();
+
+            if (string.IsNullOrEmpty(file) || file.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || file.Contains(".."))
+                return BadRequest("Bad segment name.");
+
+            var abs = _storage.MapToAbsolute(owner, fullRel);
+            var dir = HlsDirForAbsolute(abs);
+            var segAbs = Path.Combine(dir, file);
+            if (!System.IO.File.Exists(segAbs)) return NotFound();
+
+            // TS mime is fine; ranges not needed (they are tiny)
+            return PhysicalFile(segAbs, "video/mp2t");
+        }
+
 
         [HttpGet("list")]
         public ActionResult<IEnumerable<FileEntry>> List([FromQuery] string? path = "")
@@ -83,14 +250,36 @@ namespace FoxDrive.Web.Controllers
             return NoContent();
         }
 
+        [HttpPost("upload")]
+        [DisableRequestSizeLimit]
+        public async Task<IActionResult> Upload([FromQuery] string? path, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("No file uploaded.");
+
+            var (owner, rel, _) = Resolve(path);
+            if (!_shares.CanWrite(CurrentUser, owner, rel ?? "")) return Forbid();
+
+            var targetRel = Path.Combine(rel ?? "", file.FileName);
+            var targetAbs = _storage.MapToAbsolute(owner, targetRel);
+            Directory.CreateDirectory(Path.GetDirectoryName(targetAbs)!);
+
+            await using (var fs = System.IO.File.Create(targetAbs))
+            {
+                await file.CopyToAsync(fs);
+            }
+
+            return NoContent();
+        }
+
         [HttpPost("upload/chunk")]
         [DisableRequestSizeLimit] // each chunk is small anyway (e.g., 8–16 MB)
         public async Task<IActionResult> UploadChunk(
             [FromQuery] string? path,
             [FromQuery] string fileName,
             [FromQuery] string uploadId,
-            [FromQuery] int index,              
-            [FromQuery] int total,            
+            [FromQuery] int index,
+            [FromQuery] int total,
             IFormFile chunk)
         {
             if (string.IsNullOrWhiteSpace(fileName) || string.IsNullOrWhiteSpace(uploadId))
@@ -104,13 +293,12 @@ namespace FoxDrive.Web.Controllers
             if (!_shares.CanWrite(CurrentUser, owner, rel ?? "")) return Forbid();
 
             // Save to a temp folder under the target dir: <target>/.uploads/<uploadId>/
-            var tmpRel   = Path.Combine(rel ?? "", ".uploads", uploadId);
-            var tmpAbs   = _storage.MapToAbsolute(owner, tmpRel);
+            var tmpRel = Path.Combine(rel ?? "", ".uploads", uploadId);
+            var tmpAbs = _storage.MapToAbsolute(owner, tmpRel);
             Directory.CreateDirectory(tmpAbs);
 
             var partName = $"{index:D6}.part";
-            var partAbs  = Path.Combine(tmpAbs, partName);
-
+            var partAbs = Path.Combine(tmpAbs, partName);
             // Write this chunk
             await using (var fs = System.IO.File.Create(partAbs))
             {
@@ -138,7 +326,14 @@ namespace FoxDrive.Web.Controllers
             }
 
             // Cleanup temp
-            try { Directory.Delete(tmpAbs, recursive: true); } catch { /* TODO:logging*/ }
+            try
+            {
+                Directory.Delete(tmpAbs, recursive: true);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: failed to delete temp upload dir {tmpAbs}: {ex}");
+            }
 
             return NoContent();
         }
@@ -199,11 +394,17 @@ namespace FoxDrive.Web.Controllers
             var fullRel = Path.Combine(rel ?? "", name);
             if (!_shares.CanRead(CurrentUser, owner, fullRel)) return Forbid();
 
+            // Map to absolute on disk
             var abs = _storage.MapToAbsolute(owner, fullRel);
             if (!System.IO.File.Exists(abs)) return NotFound();
 
-            // also enable range for inline previews (images/video/pdf seeking)
-            return PhysicalFile(abs, GetContentType(name),fileDownloadName: name, enableRangeProcessing: true);
+            // Detect content type (covers video/mp4, video/webm, video/ogg, images, pdf, etc.)
+            var provider = new FileExtensionContentTypeProvider();
+            if (!provider.TryGetContentType(name, out var contentType))
+                contentType = "application/octet-stream";
+
+            // ✅ Range enabled for seeking in the <video> element
+            return PhysicalFile(abs, contentType, enableRangeProcessing: true);
         }
 
         [HttpDelete("delete")]
@@ -229,10 +430,10 @@ namespace FoxDrive.Web.Controllers
         public IActionResult Move([FromBody] MoveRequest req)
         {
             var (fromOwner, fromRel, _) = Resolve(req.FromPath ?? "");
-            var (toOwner, toRel, _)     = Resolve(req.ToPath   ?? "");
+            var (toOwner, toRel, _) = Resolve(req.ToPath ?? "");
 
             if (!_shares.CanWrite(CurrentUser, fromOwner, fromRel)) return Forbid();
-            if (!_shares.CanWrite(CurrentUser, toOwner, toRel))     return Forbid();
+            if (!_shares.CanWrite(CurrentUser, toOwner, toRel)) return Forbid();
 
             _storage.Move(fromOwner, fromRel, req.Name, toOwner, toRel);
             return NoContent();

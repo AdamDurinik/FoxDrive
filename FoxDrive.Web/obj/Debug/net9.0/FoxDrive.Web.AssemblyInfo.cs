@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FoxDrive.Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+756f9afa717dc7396f8276fd09596e3048e4f816")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+216208670da30dc01ff97d43f47b9429e70b509a")]
 [assembly: System.Reflection.AssemblyProductAttribute("FoxDrive.Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FoxDrive.Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

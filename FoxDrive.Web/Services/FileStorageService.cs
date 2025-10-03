@@ -7,11 +7,14 @@ namespace FoxDrive.Web.Services
     public class FileStorageService
     {
         private readonly string _usersRoot; // ...\Data\Users
+        private readonly string _sharedPath; // ...\Data\Shared
 
         public FileStorageService(IOptions<StorageOptions> options)
         {
             var dataRoot = options.Value.RootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var sharedRoot = options.Value.SharedPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             _usersRoot = Path.Combine(dataRoot, "Users");
+            _sharedPath = sharedRoot;
             Directory.CreateDirectory(_usersRoot);
         }
 

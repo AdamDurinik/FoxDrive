@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\FoxDrive\\FoxDrive.Web\\FoxDrive.Web.csproj": {}
+    "f:\\FoxDrive\\FoxDrive.Web\\FoxDrive.Web.csproj": {}
   },
   "projects": {
-    "D:\\FoxDrive\\FoxDrive.Web\\FoxDrive.Web.csproj": {
+    "f:\\FoxDrive\\FoxDrive.Web\\FoxDrive.Web.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\FoxDrive\\FoxDrive.Web\\FoxDrive.Web.csproj",
+        "projectUniqueName": "f:\\FoxDrive\\FoxDrive.Web\\FoxDrive.Web.csproj",
         "projectName": "FoxDrive.Web",
-        "projectPath": "D:\\FoxDrive\\FoxDrive.Web\\FoxDrive.Web.csproj",
+        "projectPath": "f:\\FoxDrive\\FoxDrive.Web\\FoxDrive.Web.csproj",
         "packagesPath": "C:\\Users\\Workshop\\.nuget\\packages\\",
-        "outputPath": "D:\\FoxDrive\\FoxDrive.Web\\obj\\",
+        "outputPath": "f:\\FoxDrive\\FoxDrive.Web\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

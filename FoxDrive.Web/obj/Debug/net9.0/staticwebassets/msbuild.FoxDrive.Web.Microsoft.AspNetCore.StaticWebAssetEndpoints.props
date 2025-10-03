@@ -3,14 +3,14 @@
     <StaticWebAssetEndpoint Include="_content/FoxDrive.Web/css/site.css">
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\site.css'))</AssetFile>
       <Selectors><![CDATA[[]]]></Selectors>
-      <EndpointProperties><![CDATA[[{"Name":"integrity","Value":"sha256-GeV53zUqJmWB\u002BOgIhiCAYkZaoRLizHzKBAA7SGOPSjE="}]]]></EndpointProperties>
-      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"4740"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022GeV53zUqJmWB\u002BOgIhiCAYkZaoRLizHzKBAA7SGOPSjE=\u0022"},{"Name":"Last-Modified","Value":"Wed, 27 Aug 2025 19:38:02 GMT"}]]]></ResponseHeaders>
+      <EndpointProperties><![CDATA[[{"Name":"integrity","Value":"sha256-ZdAoST0sg4HbGkZ\u002Bx3JuMsHQnBxqdls9rXAprbdGSrw="}]]]></EndpointProperties>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"4812"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022ZdAoST0sg4HbGkZ\u002Bx3JuMsHQnBxqdls9rXAprbdGSrw=\u0022"},{"Name":"Last-Modified","Value":"Sat, 06 Sep 2025 22:07:34 GMT"}]]]></ResponseHeaders>
     </StaticWebAssetEndpoint>
-    <StaticWebAssetEndpoint Include="_content/FoxDrive.Web/css/site.rbkwwrk1kz.css">
+    <StaticWebAssetEndpoint Include="_content/FoxDrive.Web/css/site.fja5nhxkzw.css">
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\site.css'))</AssetFile>
       <Selectors><![CDATA[[]]]></Selectors>
-      <EndpointProperties><![CDATA[[{"Name":"fingerprint","Value":"rbkwwrk1kz"},{"Name":"integrity","Value":"sha256-GeV53zUqJmWB\u002BOgIhiCAYkZaoRLizHzKBAA7SGOPSjE="},{"Name":"label","Value":"_content/FoxDrive.Web/css/site.css"}]]]></EndpointProperties>
-      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"4740"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022GeV53zUqJmWB\u002BOgIhiCAYkZaoRLizHzKBAA7SGOPSjE=\u0022"},{"Name":"Last-Modified","Value":"Wed, 27 Aug 2025 19:38:02 GMT"}]]]></ResponseHeaders>
+      <EndpointProperties><![CDATA[[{"Name":"fingerprint","Value":"fja5nhxkzw"},{"Name":"integrity","Value":"sha256-ZdAoST0sg4HbGkZ\u002Bx3JuMsHQnBxqdls9rXAprbdGSrw="},{"Name":"label","Value":"_content/FoxDrive.Web/css/site.css"}]]]></EndpointProperties>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"4812"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022ZdAoST0sg4HbGkZ\u002Bx3JuMsHQnBxqdls9rXAprbdGSrw=\u0022"},{"Name":"Last-Modified","Value":"Sat, 06 Sep 2025 22:07:34 GMT"}]]]></ResponseHeaders>
     </StaticWebAssetEndpoint>
     <StaticWebAssetEndpoint Include="_content/FoxDrive.Web/favicon.61n19gt1b8.ico">
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\favicon.ico'))</AssetFile>

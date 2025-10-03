@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\FoxDrive\\Portfolio.Web\\Portfolio.Web.csproj": {}
+    "F:\\FoxDrive\\Portfolio.Web\\Portfolio.Web.csproj": {}
   },
   "projects": {
-    "D:\\FoxDrive\\Portfolio.Web\\Portfolio.Web.csproj": {
+    "F:\\FoxDrive\\Portfolio.Web\\Portfolio.Web.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\FoxDrive\\Portfolio.Web\\Portfolio.Web.csproj",
+        "projectUniqueName": "F:\\FoxDrive\\Portfolio.Web\\Portfolio.Web.csproj",
         "projectName": "Portfolio.Web",
-        "projectPath": "D:\\FoxDrive\\Portfolio.Web\\Portfolio.Web.csproj",
+        "projectPath": "F:\\FoxDrive\\Portfolio.Web\\Portfolio.Web.csproj",
         "packagesPath": "C:\\Users\\Workshop\\.nuget\\packages\\",
-        "outputPath": "D:\\FoxDrive\\Portfolio.Web\\obj\\",
+        "outputPath": "F:\\FoxDrive\\Portfolio.Web\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

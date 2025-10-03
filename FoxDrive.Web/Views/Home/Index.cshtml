@@ -57,6 +57,20 @@
   </div>
 </div>
 
+<!-- Video modal -->
+<div id="videoModal" class="modal" style="display:none">
+  <div class="box" style="width:min(1200px,95vw);height:min(80vh,800px);display:grid;grid-template-rows:auto 1fr;background:#0b1422;border:1px solid var(--border);border-radius:16px;overflow:hidden">
+    <header class="row" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:#0b1422">
+      <div id="videoTitle" style="font-weight:600"></div>
+      <button class="btn" style="margin-left:auto" type="button" onclick="closeVideo()">Close</button>
+    </header>
+    <div style="padding:0;background:#0b1422">
+      <video id="videoPlayer" style="width:100%;height:100%;outline:none;background:#000" controls preload="metadata"></video>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 @section Scripts {
 <script>
@@ -128,6 +142,88 @@ function renderCrumbs(){
   parts.forEach(part=>{ acc = join(acc, part); el.appendChild(mk(part, acc)); });
 }
 
+function isVideo(name){
+  const ext = (name.split('.').pop()||'').toLowerCase();
+  return ['mp4','webm','ogg','ogv','mkv','mov'].includes(ext);
+}
+
+function streamName(name){
+  const ext = (name.split('.').pop()||'').toLowerCase();
+  if (['mkv','mov','avi'].includes(ext)) {
+    const base = name.slice(0, -(ext.length+1));
+    return base + '.mp4'; // try sibling .mp4 if present
+  }
+  return name;
+}
+function mimeFor(name){
+  const ext=(name.split('.').pop()||'').toLowerCase();
+  if (ext==='mp4'||ext==='m4v') return 'video/mp4';
+  if (ext==='webm') return 'video/webm';
+  if (ext==='ogv')  return 'video/ogg';
+  if (ext==='mov')  return 'video/quicktime';
+  if (ext==='mkv')  return 'video/x-matroska';
+  return 'application/octet-stream';
+}
+
+function openVideo(path, name){
+  const m = document.getElementById('videoModal');
+  const player = document.getElementById('videoPlayer');
+  const title  = document.getElementById('videoTitle');
+
+  // clean previous sources
+  player.pause();
+  player.removeAttribute('src');
+  while (player.firstChild) player.removeChild(player.firstChild);
+
+  title.textContent = name;
+
+  const ext = (name.split('.').pop()||'').toLowerCase();
+  const directOk = ['mp4','m4v','webm','ogv'].includes(ext);
+
+  if (directOk) {
+    // Direct (already works via /api/open with Range)
+    const s = document.createElement('source');
+    s.src  = api.open(path, name);
+    s.type = mimeFor(name);
+    player.appendChild(s);
+    player.load();
+    player.play().catch(()=>{});
+  } else {
+    // HLS for anything else (MKV, MOV, AVI, etc.)
+    const manifest = `/api/hls/manifest?${new URLSearchParams({ path, name })}`;
+    if (window.Hls && Hls.isSupported()){
+      const hls = new Hls({ enableWorker:true });
+      hls.loadSource(manifest);
+      hls.attachMedia(player);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => player.play().catch(()=>{}));
+      hls.on(Hls.Events.ERROR, (ev,data) => console.warn('HLS error', data));
+    } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari
+      player.src = manifest;
+      player.addEventListener('loadedmetadata', () => player.play().catch(()=>{}), {once:true});
+    } else {
+      alert('Streaming is not supported by this browser.');
+      return;
+    }
+  }
+
+  m.classList.add('show');
+  m.style.display = 'flex';
+}
+
+
+function closeVideo(){
+  const m = document.getElementById('videoModal');
+  const player = document.getElementById('videoPlayer');
+  player.pause();
+  player.removeAttribute('src'); // release
+  player.load();
+  m.classList.remove('show');
+  m.style.display = 'none';
+}
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeVideo(); });
+
+
 // ---------- Context menu ----------
 function showCtx(x,y,items){
   ctx.innerHTML='';
@@ -193,10 +289,14 @@ async function refresh(){
         menu.push({text:'Open', onClick:()=> setPath(join(currentPath, it.name))});
         const p=join(currentPath,it.name);
         menu.push({text: isFav(p)?'Remove from favorites':'Add to favorites', onClick:()=> toggleFav(p)});
-      }else{
+      }else if (isVideo(it.name)) {
+        menu.push({text:'Play', onClick: ()=> openVideo(currentPath, it.name)});
+        menu.push({text:'Download', href: api.download(currentPath, it.name)});
+      } else {
         menu.push({text:'Open', href: api.open(currentPath, it.name), target:'_blank'});
         menu.push({text:'Download', href: api.download(currentPath, it.name)});
       }
+
       menu.push({text:'Rename', onClick: async ()=>{
         const to=prompt('New name:', it.name); if(!to||to===it.name) return;
         const r=await api.rename(currentPath,it.name,to); if(!r.ok) alert(await r.text()); refresh();
@@ -209,7 +309,12 @@ async function refresh(){
     };
 
     // Click / drag behavior
-    card.onclick=()=>{ if(it.kind===1) setPath(join(currentPath,it.name)); else window.open(api.open(currentPath,it.name),'_blank'); };
+    card.onclick=()=>{ 
+      if (it.kind===1) return setPath(join(currentPath, it.name));
+      if (isVideo(it.name)) return openVideo(currentPath, it.name);
+      window.open(api.open(currentPath, it.name), '_blank');
+    };
+
     card.addEventListener('dragstart', e=>{
       e.dataTransfer.setData('application/x-foxdrive', JSON.stringify({ name: it.name, fromPath: currentPath }));
       e.dataTransfer.effectAllowed='move';
@@ -269,20 +374,28 @@ async function uploadFiles(fileList){
   wrap.style.display = 'block';
 
   for (const f of files){
+    // Log file name and current path for debugging
+    console.log(`Uploading file: ${f.name} to path: "${currentPath}"`);
+
     const row = document.createElement('div');
     row.className = 'muted';
     row.textContent = `Uploading ${f.name} (0%)`;
     wrap.prepend(row);
 
     try {
+      row.textContent= "test";
+      console.log("file size: " + f.size);
       if (f.size <= 95 * 1024 * 1024) {
+        console.log("small file upload");
         // small file -> existing endpoint
         const form = new FormData();
         form.append('file', f, f.name);
+        console.log("form: " + form.path)
         const r = await api.upload(currentPath, form);
         if (!r.ok) throw new Error(await r.text());
         row.textContent = `Uploaded ${f.name} ✔`;
       } else {
+        console.log("large file upload");
         // big file -> chunked
         await uploadLargeFile(currentPath, f, (done, total) => {
           const pct = Math.max(1, Math.floor((done / total) * 100));
@@ -297,7 +410,6 @@ async function uploadFiles(fileList){
 
   await refresh(); // update grid
 }
-
 // ---------- Uploads & Dropzone ----------
 document.getElementById('fileInput').addEventListener('change', async (e)=>{
   const files = e.target.files; if (!files || !files.length) return;
