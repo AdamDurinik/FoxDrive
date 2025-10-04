@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "aLE/UcyoAOg=",
+  "dgSpecHash": "SCseorIw0FU=",
   "success": true,
-  "projectFilePath": "f:\\FoxDrive\\FoxDrive.Web\\FoxDrive.Web.csproj",
+  "projectFilePath": "F:\\FoxDrive\\FoxDrive.Web\\FoxDrive.Web.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Workshop\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\Workshop\\.nuget\\packages\\microsoft.aspnetcore.authentication\\2.3.0\\microsoft.aspnetcore.authentication.2.3.0.nupkg.sha512",

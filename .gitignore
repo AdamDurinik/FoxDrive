@@ -3,5 +3,13 @@ Data
 *.db
 *.db-shm
 *.db-wal
+*.exe
+*.dll
+obj
+obj
+FoxDrive.Web\bin
+net9.0
+bin
 Debug
 Release
+.vscode

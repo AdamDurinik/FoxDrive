@@ -38,7 +38,6 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
 }
-
 // Allow running admin commands from CLI
 if (args.Length > 0)
 {

@@ -1,0 +1,220 @@
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<header>
+    <div style="font-weight:600">FoxHint Admin</div>
+    <form asp-controller="Auth" asp-action="Logout" method="post" style="margin-left:auto">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn danger">Logout</button>
+    </form>
+</header>
+
+<main>
+    <div class="grid" style="margin-top:20px">
+        <!-- CPU -->
+        <div class="card">
+            <div class="title">CPU</div>
+            <canvas id="cpuChart" height="180"></canvas>
+            <div id="cpuText" class="metric">-- / 100%</div>
+        </div>
+
+        <!-- Memory -->
+        <div class="card">
+            <div class="title">Memory</div>
+            <canvas id="memChart" height="180"></canvas>
+            <div id="memText" class="metric">-- / 100%</div>
+        </div>
+
+        <!-- Network Upload -->
+        <div class="card">
+            <div class="title">Network Upload</div>
+            <canvas id="netUpChart" height="180"></canvas>
+            <div id="netUpText" class="metric">-- MB/s</div>
+        </div>
+
+        <!-- Network Download -->
+        <div class="card">
+            <div class="title">Network Download</div>
+            <canvas id="netDownChart" height="180"></canvas>
+            <div id="netDownText" class="metric">-- MB/s</div>
+        </div>
+
+        <!-- Disks -->
+        <div class="card">
+            <div class="title">Disks</div>
+            <div id="diskCharts"></div>
+        </div>
+
+        <!-- Applications -->
+        <div class="card">
+            <div class="title">Applications</div>
+            <div class="meta" id="appsStatus">loading…</div>
+        </div>
+    </div>
+</main>
+
+<style>
+.card {
+    background:linear-gradient(180deg,#101a2b,#0c1320);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px;
+    box-shadow:0 6px 18px #00000050;
+    text-align:center;
+}
+.metric { margin-top:8px; font-weight:600; font-size:14px; color:var(--accent); }
+.status-badge {
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+    margin:3px 0;
+}
+.online { background:#1f5030; color:#7aff9c; }
+.offline { background:#502020; color:#ff7a7a; }
+#diskCharts > .disk-wrap { margin-bottom:18px; text-align:center; }
+</style>
+
+<script>
+let cpuChart, memChart, netUpChart, netDownChart;
+
+// keep per-drive charts; key = sanitized drive name (e.g., C__)
+const diskCharts = Object.create(null);
+
+// simple sanitizer for element IDs (handles "C:\", "D:\", etc.)
+function idSafe(s) { return String(s).replace(/[^a-z0-9]+/gi, '_'); }
+
+function makeDoughnut(ctx, color) {
+    return new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ["Used", "Free"],
+            datasets: [{ data: [0, 100], backgroundColor: [color, "#223045"] }]
+        },
+        options: {
+            cutout: "70%",
+            animation: false,
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+function initCharts() {
+    cpuChart     = makeDoughnut(document.getElementById("cpuChart"),     "#5cc8ff");
+    memChart     = makeDoughnut(document.getElementById("memChart"),     "#7c5cff");
+    netUpChart   = makeDoughnut(document.getElementById("netUpChart"),   "#5cc8ff");
+    netDownChart = makeDoughnut(document.getElementById("netDownChart"), "#ff6b6b");
+}
+
+// create a drive chart once; afterwards we only update its dataset
+function ensureDiskChart(driveLabel) {
+    const key = idSafe(driveLabel);
+    if (diskCharts[key]) return diskCharts[key];
+
+    const holder = document.getElementById("diskCharts");
+    const wrap = document.createElement("div");
+    wrap.className = "disk-wrap";
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 160; canvas.height = 160;
+    wrap.appendChild(canvas);
+
+    const text = document.createElement("div");
+    text.className = "metric";
+    text.id = `diskText-${key}`;
+    wrap.appendChild(text);
+
+    holder.appendChild(wrap);
+
+    const chart = makeDoughnut(canvas, "#5cff9c");
+    diskCharts[key] = { chart, textEl: text, label: driveLabel };
+    return diskCharts[key];
+}
+
+// safe number parsing (handles numbers or numeric strings)
+function num(x) {
+    const v = typeof x === 'number' ? x : parseFloat(x);
+    return Number.isFinite(v) ? v : 0;
+}
+
+// dynamic network scaling (donut “max” adapts to recent peaks)
+let netMaxUp = 10;    // MB/s
+let netMaxDown = 10;  // MB/s
+
+async function loadStats() {
+    try {
+        const res = await fetch('/api/system/stats', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // --- CPU ---
+        const cpuUsed = num(data?.cpu?.used);
+        cpuChart.data.datasets[0].data = [cpuUsed, Math.max(0, 100 - cpuUsed)];
+        cpuChart.update();
+        document.getElementById("cpuText").textContent = `${cpuUsed.toFixed(1)}% / 100%`;
+
+        // --- Memory ---
+        const memUsed = num(data?.memory?.used);
+        memChart.data.datasets[0].data = [memUsed, Math.max(0, 100 - memUsed)];
+        memChart.update();
+        document.getElementById("memText").textContent = `${memUsed.toFixed(1)}% / 100%`;
+
+        // --- Network ---
+        const up   = num(data?.network?.sent);
+        const down = num(data?.network?.recv);
+
+        // adapt max to recent peak so the donut is meaningful
+        if (up   > netMaxUp)   netMaxUp   = up   * 1.2;
+        if (down > netMaxDown) netMaxDown = down * 1.2;
+
+        netUpChart.data.datasets[0].data   = [up,   Math.max(0, netMaxUp   - up)];
+        netDownChart.data.datasets[0].data = [down, Math.max(0, netMaxDown - down)];
+        netUpChart.update(); netDownChart.update();
+
+        document.getElementById("netUpText").textContent   = `${up.toFixed(2)} MB/s / ${netMaxUp.toFixed(1)} MB/s`;
+        document.getElementById("netDownText").textContent = `${down.toFixed(2)} MB/s / ${netMaxDown.toFixed(1)} MB/s`;
+
+        // --- Disks ---
+        const disks = data?.disks || {};
+        for (const [label, valRaw] of Object.entries(disks)) {
+            const usedPct = num(valRaw);
+            const node = ensureDiskChart(label); // create once
+            node.chart.data.datasets[0].data = [usedPct, Math.max(0, 100 - usedPct)];
+            node.chart.update();
+            node.textEl.textContent = `${label} ${usedPct.toFixed(1)}% / 100%`;
+        }
+
+        // --- Applications ---
+        const appsDiv = document.getElementById("appsStatus");
+        appsDiv.innerHTML = "";
+        const apps = data?.apps || {};
+        for (const [app, online] of Object.entries(apps)) {
+            const span = document.createElement("span");
+            span.className = "status-badge " + (online ? "online" : "offline");
+            span.textContent = `${app} - ${online ? "ONLINE" : "OFFLINE"}`;
+            appsDiv.appendChild(span);
+            appsDiv.appendChild(document.createElement("br"));
+        }
+    } catch (err) {
+        console.error("stats error:", err);
+        // leave last values on screen; don’t nuke the DOM
+    }
+}
+
+initCharts();
+loadStats();
+setInterval(loadStats, 1000); // 1s is plenty; 100ms will cause perf issues
+</script>
+</body>
+</html>

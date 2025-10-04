@@ -72,18 +72,34 @@ namespace FoxDrive.Web.Controllers
             psi.ArgumentList.Add("-hide_banner");
             psi.ArgumentList.Add("-nostdin");
             psi.ArgumentList.Add("-y");
-            psi.ArgumentList.Add("-loglevel"); psi.ArgumentList.Add("error");  // quiet unless error
-            psi.ArgumentList.Add("-report");                                   // ffmpeg-*.log in outDir
-            psi.ArgumentList.Add("-i");            psi.ArgumentList.Add(absInput);
+            psi.ArgumentList.Add("-loglevel"); psi.ArgumentList.Add("error");
+            psi.ArgumentList.Add("-report");
+
+            // --- GPU acceleration ---
+            psi.ArgumentList.Add("-hwaccel"); psi.ArgumentList.Add("cuda");
+            psi.ArgumentList.Add("-hwaccel_output_format"); psi.ArgumentList.Add("cuda");
+
+            // --- Input ---
+            psi.ArgumentList.Add("-i"); psi.ArgumentList.Add(absInput);
+
+            // --- Video ---
             psi.ArgumentList.Add("-map"); psi.ArgumentList.Add("0:v:0?");
+            psi.ArgumentList.Add("-vf"); psi.ArgumentList.Add("scale_cuda=w=1920:h=-2,hwdownload,format=nv12");
+            psi.ArgumentList.Add("-c:v"); psi.ArgumentList.Add("h264_nvenc");
+            psi.ArgumentList.Add("-preset"); psi.ArgumentList.Add("p5");         // Balanced speed/quality
+            psi.ArgumentList.Add("-b:v"); psi.ArgumentList.Add("5M");
+            psi.ArgumentList.Add("-maxrate"); psi.ArgumentList.Add("6M");
+            psi.ArgumentList.Add("-bufsize"); psi.ArgumentList.Add("10M");
+            psi.ArgumentList.Add("-rc:v"); psi.ArgumentList.Add("vbr");          // Variable bitrate control
+
+            // --- Audio ---
             psi.ArgumentList.Add("-map"); psi.ArgumentList.Add("0:a:0?");
-            psi.ArgumentList.Add("-c:v"); psi.ArgumentList.Add("libx264");
-            psi.ArgumentList.Add("-preset"); psi.ArgumentList.Add("veryfast");
-            psi.ArgumentList.Add("-crf"); psi.ArgumentList.Add("23");
             psi.ArgumentList.Add("-c:a"); psi.ArgumentList.Add("aac");
             psi.ArgumentList.Add("-b:a"); psi.ArgumentList.Add("128k");
             psi.ArgumentList.Add("-ar"); psi.ArgumentList.Add("48000");
             psi.ArgumentList.Add("-ac"); psi.ArgumentList.Add("2");
+
+            // --- Output (HLS) ---
             psi.ArgumentList.Add("-f"); psi.ArgumentList.Add("hls");
             psi.ArgumentList.Add("-hls_time"); psi.ArgumentList.Add("4");
             psi.ArgumentList.Add("-hls_list_size"); psi.ArgumentList.Add("0");
@@ -96,8 +112,6 @@ namespace FoxDrive.Web.Controllers
 
             // Start ffmpeg in background (do NOT await; it will build in the cache)
             Process.Start(psi);
-
-            // don't block—just return; caller will serve 202 until ready
         }
 
         private string CurrentUser => User.Identity?.Name ?? "unknown";
@@ -162,41 +176,59 @@ namespace FoxDrive.Web.Controllers
 
             var manifestPath = Path.Combine(dir, "index.m3u8");
 
-            // If manifest doesn’t exist yet but at least one segment is ready, serve a minimal one
-            if (!System.IO.File.Exists(manifestPath))
+            // 🔒 make sure m3u8 isn’t cached by browser/CDN
+            Response.Headers["Cache-Control"]     = "no-store, no-cache, must-revalidate";
+            Response.Headers["Pragma"]            = "no-cache";
+            Response.Headers["Expires"]           = "0";
+            Response.Headers["Surrogate-Control"] = "no-store";
+
+            // ⏳ wait up to ~2s until the playlist is actually playable (has at least one .ts)
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            string text = string.Empty;
+
+            while (sw.Elapsed < TimeSpan.FromSeconds(2))
             {
-                var firstSeg = Directory.GetFiles(dir, "seg*.ts").OrderBy(f => f).FirstOrDefault();
-                if (firstSeg == null)
-                    return StatusCode(202, "Preparing stream...");
-
-                // Generate a temporary manifest that grows later
-                var tmp = new[]
+                if (System.IO.File.Exists(manifestPath))
                 {
-                    "#EXTM3U",
-                    "#EXT-X-VERSION:3",
-                    "#EXT-X-TARGETDURATION:4",
-                    "#EXT-X-MEDIA-SEQUENCE:0",
-                    "#EXTINF:4.0,",
-                    Path.GetFileName(firstSeg)
-                };
-
-                var textTmp = string.Join("\n", tmp);
-                return Content(textTmp, "application/vnd.apple.mpegurl");
-            }
-
-            var lines = System.IO.File.ReadAllLines(manifestPath);
-            
-            for (int i = 0; i < lines.Length; i++)
-            {
-                var l = lines[i];
-                if (!l.StartsWith("#", StringComparison.Ordinal) &&
-                    l.EndsWith(".ts", StringComparison.OrdinalIgnoreCase))
+                    using var fs = new FileStream(manifestPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    using var sr = new StreamReader(fs);
+                    text = sr.ReadToEnd();
+                    if (text.IndexOf(".ts", StringComparison.OrdinalIgnoreCase) >= 0)
+                        break;
+                }
+                else
                 {
-                    lines[i] = $"/api/hls/segment?path={Uri.EscapeDataString(path ?? "")}&name={Uri.EscapeDataString(name)}&file={Uri.EscapeDataString(l)}";
+                    // fallback: if first seg exists, serve a tiny one-segment playlist
+                    if (Directory.Exists(dir))
+                    {
+                        var firstSeg = Directory.GetFiles(dir, "seg*.ts").OrderBy(f => f).FirstOrDefault();
+                        if (firstSeg != null)
+                        {
+                            text = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:4.0,\n" +
+                                Path.GetFileName(firstSeg) + "\n";
+                            break;
+                        }
+                    }
                 }
             }
-            var text = string.Join("\n", lines);
-            return Content(text, "application/vnd.apple.mpegurl");
+
+            if (string.IsNullOrEmpty(text))
+                return StatusCode(202, "Preparing stream...");
+
+            // rewrite segment URIs to your API
+            var lines = text.Replace("\r", "").Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var l = lines[i].Trim();
+                if (!l.StartsWith("#") && l.EndsWith(".ts", StringComparison.OrdinalIgnoreCase))
+                {
+                    lines[i] =
+                        $"/api/hls/segment?path={Uri.EscapeDataString(path ?? "")}&name={Uri.EscapeDataString(name)}&file={Uri.EscapeDataString(l)}";
+                }
+            }
+
+            var outText = string.Join("\n", lines) + "\n";
+            return Content(outText, "application/vnd.apple.mpegurl");
         }
 
         [HttpGet("hls/segment")]
@@ -215,6 +247,7 @@ namespace FoxDrive.Web.Controllers
             if (!System.IO.File.Exists(segAbs)) return NotFound();
 
             // TS mime is fine; ranges not needed (they are tiny)
+            Response.Headers["Cache-Control"] = "no-store";
             return PhysicalFile(segAbs, "video/mp2t");
         }
 
