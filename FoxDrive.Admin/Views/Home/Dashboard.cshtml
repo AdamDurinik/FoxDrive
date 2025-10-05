@@ -13,7 +13,7 @@
 <body>
 <header>
     <div style="font-weight:600">FoxHint Admin</div>
-    <form asp-controller="Auth" asp-action="Logout" method="post" style="margin-left:auto">
+    <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post" style="margin-left:auto">
         @Html.AntiForgeryToken()
         <button type="submit" class="btn danger">Logout</button>
     </form>
@@ -60,6 +60,29 @@
             <div class="title">Applications</div>
             <div class="meta" id="appsStatus">loading…</div>
         </div>
+
+        <!-- USERS ADMIN (full width) -->
+        <div class="card" style="grid-column:1 / -1">
+            <div class="title" style="text-align:left">Users</div>
+            <div id="usersWrap" style="overflow:auto">
+                <table id="usersTable" style="width:100%; border-collapse:separate; border-spacing:0 8px">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left;padding:6px 8px">Username</th>
+                            <th style="text-align:left;padding:6px 8px">Email</th>
+                            <th style="text-align:center;padding:6px 8px">Role</th>
+                            <th style="text-align:center;padding:6px 8px">Approved</th>
+                            <th style="text-align:center;padding:6px 8px">Created</th>
+                            <th style="text-align:center;padding:6px 8px">Last Login</th>
+                            <th style="text-align:right;padding:6px 8px">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersBody">
+                        <tr><td colspan="7" style="padding:10px;color:var(--muted)">Loading users…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </main>
 
@@ -84,137 +107,208 @@
 .online { background:#1f5030; color:#7aff9c; }
 .offline { background:#502020; color:#ff7a7a; }
 #diskCharts > .disk-wrap { margin-bottom:18px; text-align:center; }
+
+/* users table rows */
+#usersTable tbody tr {
+    background:#0c1320;
+    border:1px solid var(--border);
+}
+#usersTable td, #usersTable th { font-size:14px; }
 </style>
 
 <script>
+// ======== Metrics (unchanged core, stable) ========
 let cpuChart, memChart, netUpChart, netDownChart;
-
-// keep per-drive charts; key = sanitized drive name (e.g., C__)
 const diskCharts = Object.create(null);
-
-// simple sanitizer for element IDs (handles "C:\", "D:\", etc.)
-function idSafe(s) { return String(s).replace(/[^a-z0-9]+/gi, '_'); }
-
-function makeDoughnut(ctx, color) {
-    return new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ["Used", "Free"],
-            datasets: [{ data: [0, 100], backgroundColor: [color, "#223045"] }]
-        },
-        options: {
-            cutout: "70%",
-            animation: false,
-            plugins: { legend: { display: false } }
-        }
-    });
+function idSafe(s){ return String(s).replace(/[^a-z0-9]+/gi,'_'); }
+function makeDoughnut(ctx, color){
+  return new Chart(ctx,{
+    type:'doughnut',
+    data:{ labels:["Used","Free"], datasets:[{ data:[0,100], backgroundColor:[color,"#223045"] }] },
+    options:{ cutout:"70%", animation:false, plugins:{legend:{display:false}} }
+  });
 }
-
-function initCharts() {
-    cpuChart     = makeDoughnut(document.getElementById("cpuChart"),     "#5cc8ff");
-    memChart     = makeDoughnut(document.getElementById("memChart"),     "#7c5cff");
-    netUpChart   = makeDoughnut(document.getElementById("netUpChart"),   "#5cc8ff");
-    netDownChart = makeDoughnut(document.getElementById("netDownChart"), "#ff6b6b");
+function initCharts(){
+  cpuChart     = makeDoughnut(document.getElementById("cpuChart"),     "#5cc8ff");
+  memChart     = makeDoughnut(document.getElementById("memChart"),     "#7c5cff");
+  netUpChart   = makeDoughnut(document.getElementById("netUpChart"),   "#5cc8ff");
+  netDownChart = makeDoughnut(document.getElementById("netDownChart"), "#ff6b6b");
 }
-
-// create a drive chart once; afterwards we only update its dataset
-function ensureDiskChart(driveLabel) {
-    const key = idSafe(driveLabel);
-    if (diskCharts[key]) return diskCharts[key];
-
-    const holder = document.getElementById("diskCharts");
-    const wrap = document.createElement("div");
-    wrap.className = "disk-wrap";
-
-    const canvas = document.createElement("canvas");
-    canvas.width = 160; canvas.height = 160;
-    wrap.appendChild(canvas);
-
-    const text = document.createElement("div");
-    text.className = "metric";
-    text.id = `diskText-${key}`;
-    wrap.appendChild(text);
-
-    holder.appendChild(wrap);
-
-    const chart = makeDoughnut(canvas, "#5cff9c");
-    diskCharts[key] = { chart, textEl: text, label: driveLabel };
-    return diskCharts[key];
+function ensureDiskChart(driveLabel){
+  const key = idSafe(driveLabel);
+  if (diskCharts[key]) return diskCharts[key];
+  const holder = document.getElementById("diskCharts");
+  const wrap = document.createElement("div"); wrap.className="disk-wrap";
+  const c = document.createElement("canvas"); c.width=160; c.height=160; wrap.appendChild(c);
+  const t = document.createElement("div"); t.className="metric"; t.id=`diskText-${key}`; wrap.appendChild(t);
+  holder.appendChild(wrap);
+  const chart = makeDoughnut(c, "#5cff9c");
+  diskCharts[key] = { chart, textEl: t, label: driveLabel };
+  return diskCharts[key];
 }
+function num(x){ const v = typeof x==='number'?x:parseFloat(x); return Number.isFinite(v)?v:0; }
+let netMaxUp=10, netMaxDown=10;
 
-// safe number parsing (handles numbers or numeric strings)
-function num(x) {
-    const v = typeof x === 'number' ? x : parseFloat(x);
-    return Number.isFinite(v) ? v : 0;
-}
+async function loadStats(){
+  try{
+    const res = await fetch('/api/system/stats',{cache:'no-store'});
+    if(!res.ok) return;
+    const data = await res.json();
 
-// dynamic network scaling (donut “max” adapts to recent peaks)
-let netMaxUp = 10;    // MB/s
-let netMaxDown = 10;  // MB/s
+    const cpuUsed = num(data?.cpu?.used);
+    cpuChart.data.datasets[0].data=[cpuUsed, Math.max(0,100-cpuUsed)]; cpuChart.update();
+    document.getElementById("cpuText").textContent = `${cpuUsed.toFixed(1)}% / 100%`;
 
-async function loadStats() {
-    try {
-        const res = await fetch('/api/system/stats', { cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json();
+    const memUsed = num(data?.memory?.used);
+    memChart.data.datasets[0].data=[memUsed, Math.max(0,100-memUsed)]; memChart.update();
+    document.getElementById("memText").textContent = `${memUsed.toFixed(1)}% / 100%`;
 
-        // --- CPU ---
-        const cpuUsed = num(data?.cpu?.used);
-        cpuChart.data.datasets[0].data = [cpuUsed, Math.max(0, 100 - cpuUsed)];
-        cpuChart.update();
-        document.getElementById("cpuText").textContent = `${cpuUsed.toFixed(1)}% / 100%`;
+    const up = num(data?.network?.sent), down = num(data?.network?.recv);
+    if(up>netMaxUp) netMaxUp=up*1.2; if(down>netMaxDown) netMaxDown=down*1.2;
+    netUpChart.data.datasets[0].data=[up, Math.max(0,netMaxUp-up)];
+    netDownChart.data.datasets[0].data=[down, Math.max(0,netMaxDown-down)];
+    netUpChart.update(); netDownChart.update();
+    document.getElementById("netUpText").textContent   = `${up.toFixed(2)} MB/s / ${netMaxUp.toFixed(1)} MB/s`;
+    document.getElementById("netDownText").textContent = `${down.toFixed(2)} MB/s / ${netMaxDown.toFixed(1)} MB/s`;
 
-        // --- Memory ---
-        const memUsed = num(data?.memory?.used);
-        memChart.data.datasets[0].data = [memUsed, Math.max(0, 100 - memUsed)];
-        memChart.update();
-        document.getElementById("memText").textContent = `${memUsed.toFixed(1)}% / 100%`;
-
-        // --- Network ---
-        const up   = num(data?.network?.sent);
-        const down = num(data?.network?.recv);
-
-        // adapt max to recent peak so the donut is meaningful
-        if (up   > netMaxUp)   netMaxUp   = up   * 1.2;
-        if (down > netMaxDown) netMaxDown = down * 1.2;
-
-        netUpChart.data.datasets[0].data   = [up,   Math.max(0, netMaxUp   - up)];
-        netDownChart.data.datasets[0].data = [down, Math.max(0, netMaxDown - down)];
-        netUpChart.update(); netDownChart.update();
-
-        document.getElementById("netUpText").textContent   = `${up.toFixed(2)} MB/s / ${netMaxUp.toFixed(1)} MB/s`;
-        document.getElementById("netDownText").textContent = `${down.toFixed(2)} MB/s / ${netMaxDown.toFixed(1)} MB/s`;
-
-        // --- Disks ---
-        const disks = data?.disks || {};
-        for (const [label, valRaw] of Object.entries(disks)) {
-            const usedPct = num(valRaw);
-            const node = ensureDiskChart(label); // create once
-            node.chart.data.datasets[0].data = [usedPct, Math.max(0, 100 - usedPct)];
-            node.chart.update();
-            node.textEl.textContent = `${label} ${usedPct.toFixed(1)}% / 100%`;
-        }
-
-        // --- Applications ---
-        const appsDiv = document.getElementById("appsStatus");
-        appsDiv.innerHTML = "";
-        const apps = data?.apps || {};
-        for (const [app, online] of Object.entries(apps)) {
-            const span = document.createElement("span");
-            span.className = "status-badge " + (online ? "online" : "offline");
-            span.textContent = `${app} - ${online ? "ONLINE" : "OFFLINE"}`;
-            appsDiv.appendChild(span);
-            appsDiv.appendChild(document.createElement("br"));
-        }
-    } catch (err) {
-        console.error("stats error:", err);
-        // leave last values on screen; don’t nuke the DOM
+    const disks = data?.disks||{};
+    for(const [label,valRaw] of Object.entries(disks)){
+      const usedPct = num(valRaw);
+      const node = ensureDiskChart(label);
+      node.chart.data.datasets[0].data=[usedPct, Math.max(0,100-usedPct)];
+      node.chart.update();
+      node.textEl.textContent = `${label} ${usedPct.toFixed(1)}% / 100%`;
     }
+
+    const appsDiv = document.getElementById("appsStatus");
+    appsDiv.innerHTML="";
+    const apps = data?.apps||{};
+    for(const [app,online] of Object.entries(apps)){
+      const span=document.createElement("span");
+      span.className="status-badge "+(online?"online":"offline");
+      span.textContent = `${app} - ${online?"ONLINE":"OFFLINE"}`;
+      appsDiv.appendChild(span);
+      appsDiv.appendChild(document.createElement("br"));
+    }
+  }catch(e){ console.error("stats error:",e); }
+}
+initCharts(); 
+loadStats();
+setInterval(loadStats, 1000);
+
+// ======== Users admin (under metrics) ========
+
+function antiForgery(){
+  const f = document.querySelector('#logoutForm input[name="__RequestVerificationToken"]');
+  return f ? f.value : '';
 }
 
-initCharts();
-loadStats();
-setInterval(loadStats, 1000); // 1s is plenty; 100ms will cause perf issues
+async function getUsers(){
+  const r = await fetch('/api/admin/users',{cache:'no-store'});
+  if(!r.ok) throw new Error('users list failed');
+  return r.json();
+}
+
+function fmt(dt){
+  if(!dt) return '—';
+  try{ return new Date(dt).toLocaleString(); }catch{ return String(dt); }
+}
+
+function roleSelectHtml(role){
+  const roles = ['admin','user','viewer'];
+  return `<select class="btn user-role" style="padding:6px 8px">
+    ${roles.map(r => `<option value="${r}" ${String(role).toLowerCase()===r?'selected':''}>${r}</option>`).join('')}
+  </select>`;
+}
+
+async function renderUsers(){
+  const body = document.getElementById('usersBody');
+  body.innerHTML = `<tr><td colspan="7" style="padding:10px;color:var(--muted)">Loading users…</td></tr>`;
+  try{
+    const users = await getUsers();
+    if(!Array.isArray(users) || users.length===0){
+      body.innerHTML = `<tr><td colspan="7" style="padding:10px;color:var(--muted)">No users.</td></tr>`;
+      return;
+    }
+    body.innerHTML = '';
+    for(const u of users){
+      const tr = document.createElement('tr');
+      tr.dataset.id = u.id;
+      tr.innerHTML = `
+        <td style="padding:8px 10px;text-align:left">${u.username}</td>
+        <td style="padding:8px 10px;text-align:left">
+          <input type="email" class="btn user-email" value="${u.email ?? ''}" style="min-width:220px;padding:6px 8px" />
+        </td>
+        <td style="padding:8px 10px;text-align:center">
+          ${roleSelectHtml(u.role)}
+        </td>
+        <td style="padding:8px 10px;text-align:center">
+          <input type="checkbox" class="user-approved" ${u.isApproved ? 'checked':''} />
+        </td>
+        <td style="padding:8px 10px;text-align:center">${fmt(u.createdAt)}</td>
+        <td style="padding:8px 10px;text-align:center">${fmt(u.lastLoginUtc)}</td>
+        <td style="padding:8px 10px;text-align:right;white-space:nowrap">
+          <button class="btn" data-act="save">Save</button>
+          ${u.isApproved ? '' : `<button class="btn" data-act="approve" style="margin-left:6px">Approve</button>`}
+          <button class="btn" data-act="reset"   style="margin-left:6px">Reset PW</button>
+          <button class="btn danger" data-act="delete" style="margin-left:6px">Delete</button>
+        </td>
+      `;
+      body.appendChild(tr);
+    }
+  }catch(e){
+    console.error(e);
+    body.innerHTML = `<tr><td colspan="7" style="padding:10px;color:var(--danger)">Failed to load users.</td></tr>`;
+  }
+}
+
+async function postApi(url, body){
+  const token = antiForgery();
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': body ? 'application/json' : 'application/octet-stream',
+      'RequestVerificationToken': token
+    },
+    body: body ? JSON.stringify(body) : null
+  });
+  if(!r.ok){
+    const t = await r.text().catch(()=>r.statusText);
+    throw new Error(t || r.statusText);
+  }
+}
+
+document.getElementById('usersTable').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('button[data-act]');
+  if(!btn) return;
+
+  const tr = btn.closest('tr');
+  const id = tr?.dataset?.id;
+  const act = btn.getAttribute('data-act');
+
+  try{
+    if(act === 'save'){
+      const email = tr.querySelector('.user-email')?.value ?? '';
+      const role  = tr.querySelector('.user-role')?.value ?? 'user';
+      const isApproved = !!tr.querySelector('.user-approved')?.checked;
+      await postApi(`/api/admin/users/${id}/update`, { email, role, isApproved });
+    } else if (act === 'approve'){
+      await postApi(`/api/admin/users/${id}/approve`);
+    } else if (act === 'delete'){
+      if(!confirm('Delete this user?')) return;
+      await postApi(`/api/admin/users/${id}/delete`);
+    } else if (act === 'reset'){
+      const pw = prompt('New password (min 8 chars):');
+      if(!pw || pw.length < 8) return;
+      await postApi(`/api/admin/users/${id}/resetpw`, { newPassword: pw });
+    }
+    await renderUsers();
+  }catch(err){
+    alert('Action failed: '+ err.message);
+  }
+});
+
+renderUsers();
 </script>
 </body>
 </html>

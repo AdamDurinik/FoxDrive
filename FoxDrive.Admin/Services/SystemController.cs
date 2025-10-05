@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using FoxHint.Admin.Services;
+using FoxDrive.Admin.Services;
 
-namespace FoxHint.Admin.Controllers;
+namespace FoxDrive.Admin.Controllers;
 
 [ApiController]
 [Route("api/system")]

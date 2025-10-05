@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
 
-namespace FoxHint.Admin.Services;
+namespace FoxDrive.Admin.Services;
 
 public class SystemInfoService
 {
@@ -68,9 +68,7 @@ public class SystemInfoService
         return Process.GetProcessesByName(name).Any();
     }
 
-
-
-    public (float sentMbps, float recvMbps) GetNetworkUsage(string nicName = null)
+    public (float sentMbps, float recvMbps) GetNetworkUsage(string? nicName = null)
     {
         var nics = NetworkInterface.GetAllNetworkInterfaces()
             .Where(n => n.OperationalStatus == OperationalStatus.Up &&

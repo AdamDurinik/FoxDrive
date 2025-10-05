@@ -225,8 +225,8 @@ D:\FoxDrive\FoxDrive.Web\obj\Debug\net9.0\FoxDrive.Web.sourcelink.json
 D:\FoxDrive\FoxDrive.Web\obj\Debug\net9.0\compressed\dnmop8878a-fja5nhxkzw.gz
 F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\appsettings.Development.json
 F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\appsettings.json
-F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\FoxDrive.Web.staticwebassets.endpoints.json
 F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\FoxDrive.Web.staticwebassets.runtime.json
+F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\FoxDrive.Web.staticwebassets.endpoints.json
 F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\FoxDrive.Web.exe
 F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\FoxDrive.Web.deps.json
 F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\FoxDrive.Web.runtimeconfig.json
@@ -354,6 +354,8 @@ F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\runtimes\win-arm\native\e_sqlite3.dll
 F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\runtimes\win-arm64\native\e_sqlite3.dll
 F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\runtimes\win-x64\native\e_sqlite3.dll
 F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\runtimes\win-x86\native\e_sqlite3.dll
+F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\FoxDrive.Data.dll
+F:\FoxDrive\FoxDrive.Web\bin\Debug\net9.0\FoxDrive.Data.pdb
 F:\FoxDrive\FoxDrive.Web\obj\Debug\net9.0\FoxDrive.Web.csproj.AssemblyReference.cache
 F:\FoxDrive\FoxDrive.Web\obj\Debug\net9.0\FoxDrive.Web.GeneratedMSBuildEditorConfig.editorconfig
 F:\FoxDrive\FoxDrive.Web\obj\Debug\net9.0\FoxDrive.Web.AssemblyInfoInputs.cache

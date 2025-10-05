@@ -1,73 +1,93 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.EntityFrameworkCore;
-using FoxHint.Admin.Data;
-using FoxHint.Admin;
-using FoxHint.Admin.Services;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
+using FoxDrive.Data;
+using FoxDrive.Admin.Services;      
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
-
-// SQLite for admin users
-builder.Services.AddDbContext<AdminDbContext>(options =>
-    options.UseSqlite("Data Source=Data/admin_users.db"));
-
 builder.Services.AddSingleton<SystemInfoService>();
 
-// Cookie auth
+// ONE DbContext: FoxDrive.Data.AppDbContext (shared)
+// Read from appsettings ConnectionStrings:AppDb, fallback is optional
+var conn = builder.Configuration.GetConnectionString("AppDb")
+    ?? @"Data Source=D:\FoxData\foxdrive_users.db;Mode=ReadWriteCreate;Cache=Shared";
 
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseSqlite(conn, b => b.MigrationsAssembly("FoxDrive.Data"))); // use FoxDrive.Data migrations
+
+// Cookie auth (separate cookie from FoxDrive.Web to avoid collisions)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(opt =>
     {
         opt.LoginPath = "/auth/login";
         opt.LogoutPath = "/auth/logout";
         opt.AccessDeniedPath = "/auth/login";
-        opt.ExpireTimeSpan = TimeSpan.FromDays(7);
+        opt.ExpireTimeSpan = TimeSpan.FromDays(14);
         opt.SlidingExpiration = true;
-        opt.Cookie.Name = "foxhint.admin.auth";
+        opt.Cookie.Name = "foxadmin.auth";
         opt.Cookie.HttpOnly = true;
         opt.Cookie.SameSite = SameSiteMode.Lax;
-        //opt.Cookie.SecurePolicy = CookieSecurePolicy.Always; // force HTTPS cookies
+
+        opt.Events = new CookieAuthenticationEvents
+        {
+            OnRedirectToLogin = ctx =>
+            {
+                if (ctx.Request.Path.StartsWithSegments("/api"))
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return Task.CompletedTask;
+                }
+                ctx.Response.Redirect(ctx.RedirectUri);
+                return Task.CompletedTask;
+            },
+            OnRedirectToAccessDenied = ctx =>
+            {
+                if (ctx.Request.Path.StartsWithSegments("/api"))
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return Task.CompletedTask;
+                }
+                ctx.Response.Redirect(ctx.RedirectUri);
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+// If you want CLI commands (adduser/listusers/etc.), keep them here:
+if (args.Length > 0)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate(); // ensure DB exists
+
+    var exit = AdminTools.Run(args, scope.ServiceProvider);
+    Environment.ExitCode = exit;
+    return; 
+}
 
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
 }
+
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
-if (args.Length > 0)
-{
-    var tmp = WebApplication.CreateBuilder(args);
-    tmp.Services.AddDbContext<AdminDbContext>(options =>
-        options.UseSqlite("Data Source=Data/admin_users.db"));
-
-    using var sp = tmp.Services.BuildServiceProvider();
-    Environment.ExitCode = AdminTools.Run(args, sp);
-    return;
-}
-
 app.UseStaticFiles();
-
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.MapControllers(); 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Home}/{action=Dashboard}/{id?}");
 
 app.Run();

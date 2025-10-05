@@ -4,15 +4,15 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using FoxHint.Admin.Data;
+using FoxDrive.Data;
 
-namespace FoxHint.Admin.Controllers;
+namespace FoxDrive.Admin.Controllers;
 
 [Route("auth")]
 public class AuthController : Controller
 {
-    private readonly AdminDbContext _db;
-    public AuthController(AdminDbContext db) => _db = db;
+    private readonly AppDbContext _db;
+    public AuthController(AppDbContext db) => _db = db;
 
     [HttpGet("login")]
     public IActionResult Login(string? returnUrl = "/")
@@ -28,7 +28,19 @@ public class AuthController : Controller
         username = (username ?? "").Trim();
 
         // Fetch user
-        var user = await _db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Username == username);
+        var user = await _db.Users.SingleOrDefaultAsync(u => u.Username == username);
+        if(user == null)
+        {
+            ModelState.AddModelError(string.Empty, "Invalid username or password");
+            ViewData["ReturnUrl"] = returnUrl;
+            return View("Login");
+        }
+        if(user.Role != UserRole.Admin)
+        {
+            ModelState.AddModelError(string.Empty, "Access denied.");
+            ViewData["ReturnUrl"] = returnUrl;
+            return View("Login");
+        }
 
         // Always run hasher to avoid revealing if user exists
         var hasher = new PasswordHasher<string>();
@@ -48,10 +60,12 @@ public class AuthController : Controller
                 await _db.SaveChangesAsync();
             }
 
+            string roleString = user?.Role.ToString()?.ToLowerInvariant() ?? "user";
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, username),
-                new Claim("uname", username)
+                new Claim("uname", username),
+                new Claim(ClaimTypes.Role, roleString) // <-- IMPORTANT
             };
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);

@@ -1,21 +1,27 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using FoxDrive.Web.Services;   
 using FoxDrive.Web.Options;  
-using FoxDrive.Web.Data;
 using Microsoft.EntityFrameworkCore;
-using FoxDrive.Web;
+using FoxDrive.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var dbPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "foxdrive_users.db");
+Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 
 builder.Services.AddControllersWithViews();
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection("Storage"));
 builder.Services.AddSingleton<FileStorageService>();
 builder.Services.AddSingleton<SharesService>();
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=Data/foxdrive_users.db"));
 
+// --- Connection string (config first, fallback to D:\FoxData) ---
+var cfgConn = builder.Configuration.GetConnectionString("AppDb");
+var conn = !string.IsNullOrWhiteSpace(cfgConn)
+    ? cfgConn
+    : @"Data Source=D:\FoxData\foxdrive_users.db;Mode=ReadWriteCreate;Cache=Shared";
+Directory.CreateDirectory(Path.GetDirectoryName(conn.Replace("Data Source=",""))!);
 
-
+builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(conn));
 // Cookie auth
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(opt =>

@@ -1,8 +1,8 @@
-using FoxHint.Admin.Services;
+using FoxDrive.Admin.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FoxHint.Admin.Controllers;
+namespace FoxDrive.Admin.Controllers;
 
 [Authorize]
 public class HomeController : Controller

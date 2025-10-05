@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using FoxDrive.Web.Data;
+using FoxDrive.Data;
 
 namespace FoxDrive.Web.Controllers;
 
@@ -30,11 +30,18 @@ public class AuthController : Controller
         // Fetch user
         var user = await _db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Username == username);
 
+        if(user == null)
+        {
+            ModelState.AddModelError(string.Empty, "Invalid username or password");
+            ViewData["ReturnUrl"] = returnUrl;
+            return View("Login");
+        }
         // Always run hasher to avoid revealing if user exists
         var hasher = new PasswordHasher<string>();
         var verify = user is null
             ? PasswordVerificationResult.Failed
             : hasher.VerifyHashedPassword(username, user.PasswordHash, password);
+        var tracked = await _db.Users.SingleAsync(u => u.Id == user!.Id);
 
         if (verify == PasswordVerificationResult.Success ||
             verify == PasswordVerificationResult.SuccessRehashNeeded)
@@ -43,7 +50,6 @@ public class AuthController : Controller
             if (verify == PasswordVerificationResult.SuccessRehashNeeded && user is not null)
             {
                 var newHash = hasher.HashPassword(username, password);
-                var tracked = await _db.Users.SingleAsync(u => u.Id == user.Id);
                 tracked.PasswordHash = newHash;
                 await _db.SaveChangesAsync();
             }
@@ -53,7 +59,7 @@ public class AuthController : Controller
                 new Claim(ClaimTypes.Name, username),
                 new Claim("uname", username)
             };
-            var identity  = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
 
             await HttpContext.SignInAsync(
@@ -64,11 +70,15 @@ public class AuthController : Controller
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return LocalRedirect(returnUrl);
 
-            return RedirectToAction("Index", "Home");
+            if (tracked.IsApproved)
+            {
+                return RedirectToAction("Index", "Home");
+            }
         }
 
-        ModelState.AddModelError(string.Empty, "Invalid username or password");
+        ModelState.AddModelError(string.Empty, "Account pending approval.");
         ViewData["ReturnUrl"] = returnUrl;
+        await _db.SaveChangesAsync();
         return View("Login");
     }
 
