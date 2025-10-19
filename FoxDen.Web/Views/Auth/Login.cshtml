@@ -1,0 +1,48 @@
+@{
+    ViewData["Title"] = "FoxDen Login";
+    var returnUrl = ViewData["ReturnUrl"] as string ?? "/";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <main style="display:grid;place-items:center;height:100vh">
+        <div class="box" style="width:min(420px,95vw);background:var(--panel);padding:24px;border:1px solid var(--border);border-radius:14px;box-shadow:0 10px 40px #00000066">
+            <h2 style="margin-top:0;margin-bottom:18px;text-align:center">FoxDen Login</h2>
+
+            <form method="post" asp-action="Login" asp-route-returnUrl="@returnUrl">
+                @Html.AntiForgeryToken()
+                
+                <div style="margin-bottom:14px">
+                    <label style="display:block;margin-bottom:6px">Username</label>
+                    <input type="text" name="username" required
+                           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;background:#0e1623;color:var(--text)" />
+                </div>
+
+                <div style="margin-bottom:18px">
+                    <label style="display:block;margin-bottom:6px">Password</label>
+                    <input type="password" name="password" required
+                           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;background:#0e1623;color:var(--text)" />
+                </div>
+
+                <button type="submit" class="btn primary" style="width:100%">Sign in</button>
+            </form>
+
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div style="margin-top:16px;color:var(--danger)">
+                    @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        <div>@err.ErrorMessage</div>
+                    }
+                </div>
+            }
+        </div>
+    </main>
+</body>
+</html>

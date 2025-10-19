@@ -20,7 +20,9 @@ public class HomeController : Controller
             Memory = _sys.GetMemoryUsage(),
             Disks = _sys.GetDiskUsage("C:\\", "F:\\"),
             FoxDriveRunning = _sys.IsProcessRunning("FoxDrive.Web"),
-            PortfolioRunning = _sys.IsProcessRunning("FoxHint.Ui") // adjust if different
+            PortfolioRunning = _sys.IsProcessRunning("Portfolio.Web"),
+            FoxDenRunning = _sys.IsProcessRunning("FoxDen.Web") 
+
         };
         return View(model);
     }
@@ -33,4 +35,5 @@ public class DashboardViewModel
     public Dictionary<string, float> Disks { get; set; } = new();
     public bool FoxDriveRunning { get; set; }
     public bool PortfolioRunning { get; set; }
+    public bool FoxDenRunning { get; set; }
 }

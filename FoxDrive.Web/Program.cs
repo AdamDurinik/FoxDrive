@@ -29,7 +29,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         opt.LoginPath = "/auth/login";
         opt.LogoutPath = "/auth/logout";
         opt.AccessDeniedPath = "/auth/login";
-        opt.ExpireTimeSpan = TimeSpan.FromDays(7);
+        opt.ExpireTimeSpan = TimeSpan.FromDays(14);
         opt.SlidingExpiration = true;
         opt.Cookie.Name = "foxdrive.auth";
         opt.Cookie.HttpOnly = true;
@@ -44,6 +44,7 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
 }
+
 // Allow running admin commands from CLI
 if (args.Length > 0)
 {

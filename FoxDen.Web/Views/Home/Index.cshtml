@@ -1,0 +1,68 @@
+﻿@{
+    ViewData["Title"] = "FoxDen";
+}
+
+<header>
+    <div style="font-weight:600">FoxDen</div>
+    <form asp-controller="Auth" asp-action="Logout" method="post" style="margin-left:auto">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn danger">Logout</button>
+    </form>
+</header>
+
+<main>
+    <div class="tile-grid">
+
+        <a class="tile" href="/shopping">
+            <div class="tile-icon">🛒</div>
+            <div class="tile-title">Shopping List</div>
+            <div class="tile-desc">Shared items for the household.</div>
+        </a>
+
+        <a class="tile" href="/tasks">
+            <div class="tile-icon">✅</div>
+            <div class="tile-title">Tasks</div>
+            <div class="tile-desc">Assign chores & track progress.</div>
+        </a>
+
+        <a class="tile disabled" href="javascript:void(0)">
+            <div class="tile-icon">📒</div>
+            <div class="tile-title">Notes</div>
+            <div class="tile-desc">Coming soon.</div>
+        </a>
+
+        <a class="tile disabled" href="javascript:void(0)">
+            <div class="tile-icon">📦</div>
+            <div class="tile-title">Pantry</div>
+            <div class="tile-desc">Coming soon.</div>
+        </a>
+
+    </div>
+</main>
+
+<style>
+/* Tile grid */
+.tile-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px,1fr));
+    gap:16px;
+    margin-top:20px;
+}
+.tile{
+    display:block;
+    padding:16px;
+    background:linear-gradient(180deg,#101a2b,#0c1320);
+    border:1px solid var(--border);
+    border-radius:16px;
+    text-decoration:none;
+    color:#e6eefc;
+    box-shadow:0 6px 18px #00000050;
+    transition:transform .08s ease, border-color .12s ease;
+}
+.tile:hover{ transform:translateY(-2px); border-color:#2b4770; }
+.tile:active{ transform:translateY(0); }
+.tile.disabled{ opacity:.55; cursor:not-allowed; }
+.tile-icon{ font-size:28px; margin-bottom:10px; }
+.tile-title{ font-weight:700; margin-bottom:4px; }
+.tile-desc{ color:var(--muted); font-size:14px; }
+</style>

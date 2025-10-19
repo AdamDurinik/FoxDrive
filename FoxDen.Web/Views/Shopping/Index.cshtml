@@ -1,0 +1,248 @@
+@{
+    ViewData["Title"] = "FoxDen – Shopping";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>@ViewData["Title"]</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">
+    <img src="~/Resources/FoxDen.svg" alt="FoxDen" />
+    <span>FoxDen</span>
+  </div>
+  <div class="header-actions">
+    <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post">
+      @Html.AntiForgeryToken()
+      <button type="submit" class="btn danger">Logout</button>
+    </form>
+  </div>
+</header>
+
+<main class="mt-16">
+  <div class="card">
+    <div class="title">Shopping List</div>
+
+    <div class="bar">
+      <div class="bar-left">
+        <span class="muted small">Add item</span>
+      </div>
+      <div class="bar-right">
+        <button id="btnDeleteAll" class="btn icon danger" title="Delete all" aria-label="Delete all">🗑️</button>
+        <button id="btnDeleteAllBought" class="btn icon danger" title="Delete all bought" aria-label="Delete all bought">🧹</button>
+      </div>
+    </div>
+
+    <form id="addForm">
+      <div><label>Name</label><input name="name" required placeholder="e.g., Milk"/></div>
+      <div><label>Amount</label><input name="amount" placeholder="2x / 1kg"/></div>
+      <div><label>Date</label><input name="date" type="date"/></div>
+      <div><label>Shop</label><input name="shop" placeholder="Lidl"/></div>
+      <button class="btn primary" type="submit">Add</button>
+    </form>
+
+    <div id="listWrap">
+      <div id="emptyMsg" class="muted pad-8">Loading…</div>
+      <ul id="list" class="list" aria-live="polite"></ul>
+    </div>
+  </div>
+</main>
+
+<script>
+// ---------- helpers ----------
+function antiForgery(){
+  const f = document.querySelector('#logoutForm input[name="__RequestVerificationToken"]');
+  return f ? f.value : '';
+}
+function fmtDate(d){
+  if(!d) return '';
+  try { return new Date(d).toISOString().slice(0,10); } catch { return ''; }
+}
+// Join with dashes only for non-empty values
+const dashJoin = (...parts) => parts
+  .map(p => (p ?? '').trim())
+  .filter(p => p.length > 0)
+  .join(' - ');
+// Parse "name - amount - shop" back to fields (lenient)
+function parseLine(text){
+  const raw = (text ?? '').replace(/\s+/g,' ').trim();
+  if(!raw) return { name:'', amount:null, shop:null };
+  const parts = raw.split('-').map(s => s.trim()).filter(Boolean);
+  return {
+    name: parts[0] ?? '',
+    amount: parts[1] ? parts[1] : null,
+    shop: parts[2] ? parts[2] : null
+  };
+}
+
+// ---------- api ----------
+async function loadItems(){
+  const r = await fetch('/api/shopping', { cache:'no-store' });
+  if(!r.ok) throw new Error('load failed');
+  return r.json();
+}
+async function upsert(it){
+  const r = await fetch('/api/shopping/upsert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgery() },
+    body: JSON.stringify(it)
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function toggle(id){
+  const r = await fetch(`/api/shopping/${id}/toggle`, {
+    method:'POST', headers:{ 'RequestVerificationToken': antiForgery() }
+  });
+  if(!r.ok) throw new Error(await r.text());
+}
+async function del(id){
+  const r = await fetch(`/api/shopping/${id}`, {
+    method:'DELETE', headers:{ 'RequestVerificationToken': antiForgery() }
+  });
+  if(!r.ok) throw new Error(await r.text());
+}
+async function deleteAll(){
+  const r = await fetch(`/api/shopping/delete-all`, {
+    method:'POST', headers:{ 'RequestVerificationToken': antiForgery() }
+  });
+  if(!r.ok) throw new Error(await r.text());
+}
+async function deleteAllBought(){
+  const r = await fetch(`/api/shopping/delete-all-bought`, {
+    method:'POST', headers:{ 'RequestVerificationToken': antiForgery() }
+  });
+  if(!r.ok) throw new Error(await r.text());
+}
+
+async function render(){
+  const list = document.getElementById('list');
+  const empty = document.getElementById('emptyMsg');
+  list.innerHTML = '';
+  empty.textContent = 'Loading…';
+
+  try{
+    const items = await loadItems();
+    if(!Array.isArray(items) || items.length===0){
+      empty.textContent = 'Empty.';
+      return;
+    }
+    empty.textContent = '';
+    for(const it of items){
+      const li = document.createElement('li');
+      li.className = 'item' + (it.bought ? ' done' : '');
+      li.dataset.id = it.id;
+
+     li.innerHTML = `
+        <div class="content">
+          <label class="inline line" contenteditable="true" role="textbox" aria-multiline="false" spellcheck="false">
+            ${dashJoin(it.name, it.amount, it.shop)}
+          </label>
+          ${it.date ? `<span class="sep">•</span><span class="muted">${fmtDate(it.date)}</span>` : ''}
+        </div>
+        <div class="actions">
+          <button class="btn icon ${it.bought ? '' : 'primary'}" data-act="toggle" aria-label="${it.bought ? 'Undo' : 'Done'}">
+            ${it.bought ? '↩️' : '✔️'}
+          </button>
+          <button class="btn icon danger" data-act="del" aria-label="Delete">🗑️</button>
+        </div>
+      `;
+      list.appendChild(li);
+    }
+  }catch(e){
+    console.error(e);
+    empty.textContent = 'Failed to load.';
+  }
+}
+
+// Save on Enter/blur from the contenteditable line
+document.getElementById('list').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && e.target.matches('.inline')) { e.preventDefault(); e.target.blur(); }
+});
+document.getElementById('list').addEventListener('blur', async (e)=>{
+  const t = e.target;
+  if(!t.matches('.inline')) return;
+  const li = t.closest('.item');
+  const id = parseInt(li.dataset.id||'0',10);
+  const parsed = parseLine(t.textContent);
+
+  const obj = {
+    id,
+    name: parsed.name,
+    amount: parsed.amount || null,
+    shop: parsed.shop || null,
+    date: null,
+    bought: li.classList.contains('done')
+  };
+  const dt = li.querySelector('.muted')?.textContent?.trim();
+  if (dt && /^\d{4}-\d{2}-\d{2}$/.test(dt)) obj.date = dt + "T00:00:00Z";
+  if(!obj.name){ return; }
+  await upsert(obj);
+}, true);
+
+// Row buttons
+document.getElementById('list').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('button[data-act]');
+  if(!btn) return;
+  const li = btn.closest('.item');
+  const id = parseInt(li.dataset.id||'0',10);
+  const act = btn.getAttribute('data-act');
+
+  if(act === 'toggle'){
+    await toggle(id);
+    const done = li.classList.toggle('done');
+    btn.innerHTML = done ? '↩️' : '✔️';
+    btn.setAttribute('aria-label', done ? 'Undo' : 'Done');
+    btn.classList.toggle('primary', !done);
+    
+    return;
+  }
+  if(act === 'del'){
+    if(!confirm('Delete this item?')) return;
+    await del(id);
+    li.remove();
+    if(!document.querySelector('#list .item')){
+      document.getElementById('emptyMsg').textContent = 'Empty.';
+    }
+  }
+});
+
+// Add form
+document.getElementById('addForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const f = e.target;
+  const obj = {
+    id: null,
+    name: f.name.value.trim(),
+    amount: f.amount.value || null,
+    date: f.date.value ? f.date.value + "T00:00:00Z" : null,
+    shop: f.shop.value || null,
+    bought: false
+  };
+  if(!obj.name) return;
+  await upsert(obj);
+  f.reset();
+  render();
+});
+
+// Bulk deletes
+document.getElementById('btnDeleteAll').addEventListener('click', async ()=>{
+  if(!confirm('Delete ALL items? This cannot be undone.')) return;
+  await deleteAll();
+  render();
+});
+document.getElementById('btnDeleteAllBought').addEventListener('click', async ()=>{
+  if(!confirm('Delete ALL bought items? This cannot be undone.')) return;
+  await deleteAllBought();
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

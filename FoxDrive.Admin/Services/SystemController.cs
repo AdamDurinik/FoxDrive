@@ -30,9 +30,11 @@ public class SystemController : ControllerBase
             memory = new { used = mem.ToString("F1"), total = "100" },
             disks,
             network = new { sent = net.sentMbps.ToString("F2"), recv = net.recvMbps.ToString("F2") },
-            apps = new {
-                foxdrive = _sys.IsProcessRunning("FoxDrive"),
-                portfolio = _sys.IsProcessRunning("Portfolio")
+            apps = new
+            {
+                foxdrive = _sys.IsProcessRunning("FoxDrive.Web"),
+                portfolio = _sys.IsProcessRunning("Portfolio.Web"),
+                foxden = _sys.IsProcessRunning("FoxDen.Web"),
             }
         };
 
