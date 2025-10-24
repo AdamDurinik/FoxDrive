@@ -65,7 +65,7 @@
       <button class="btn" style="margin-left:auto" type="button" onclick="closeVideo()">Close</button>
     </header>
     <div style="padding:0;background:#0b1422">
-      <video id="videoPlayer" style="width:100%;height:100%;outline:none;background:#000" controls preload="metadata"></video>
+      <video id="videoPlayer" style="width:100%;height:100%;outline:none;background:#000" controls preload="metadata" crossorigin="anonymous"></video>
     </div>
   </div>
 </div>
@@ -165,42 +165,83 @@ function mimeFor(name){
   return 'application/octet-stream';
 }
 
+ //add subtitles support
+  function baseName(file){
+    const i = file.lastIndexOf('.');
+    return i>0 ? file.slice(0, i) : file;
+  }
+  function langFromSuffix(file){
+    const parts = file.split('.');
+    if (parts.length >= 3 && parts.at(-1).toLowerCase()==='vtt') return parts.at(-2).toLowerCase();
+    return "";
+  }
+  async function attachSubtitles(player, path, name){
+    // remove previous tracks
+    [...player.querySelectorAll('track')].forEach(t => t.remove());
+
+    const items = await api.list(path || "");
+    const bn = baseName(name).toLowerCase();
+
+    const vtts = items
+      .filter(i => i.kind===0 && /\.vtt$/i.test(i.name))
+      .filter(i => {
+        const nm = i.name.toLowerCase();
+        return nm === `${bn}.vtt` || (nm.startsWith(`${bn}.`) && nm.endsWith('.vtt'));
+      });
+
+    vtts.forEach((it) => {
+      const tr = document.createElement('track');
+      tr.kind = 'subtitles';
+      const lang = langFromSuffix(it.name) || '';
+      tr.srclang = lang || 'xx';
+      tr.label = (lang || 'Subtitles').toUpperCase();
+      tr.src = api.open(path || "", it.name);
+      // IMPORTANT: do not set tr.default, do not force .textTracks[0].mode
+      player.appendChild(tr);
+    });
+  }
+
 function openVideo(path, name){
   const m = document.getElementById('videoModal');
   const player = document.getElementById('videoPlayer');
   const title  = document.getElementById('videoTitle');
 
-  // clean previous sources
   player.pause();
-  player.removeAttribute('src');
+  // Clear previous <source>/<track>
   while (player.firstChild) player.removeChild(player.firstChild);
-
   title.textContent = name;
 
   const ext = (name.split('.').pop()||'').toLowerCase();
   const directOk = ['mp4','m4v','webm','ogv'].includes(ext);
 
   if (directOk) {
-    // Direct (already works via /api/open with Range)
-    const s = document.createElement('source');
-    s.src  = api.open(path, name);
-    s.type = mimeFor(name);
-    player.appendChild(s);
-    player.load();
-    player.play().catch(()=>{});
+    // Add tracks BEFORE load() so the CC button appears
+    attachSubtitles(player, path, name).then(()=>{
+      const s = document.createElement('source');
+      s.src  = api.open(path, name);
+      s.type = mimeFor(name);
+      player.appendChild(s);
+      player.load();
+      player.play().catch(()=>{});
+    });
   } else {
-    // HLS for anything else (MKV, MOV, AVI, etc.)
     const manifest = `/api/hls/manifest?${new URLSearchParams({ path, name })}`;
     if (window.Hls && Hls.isSupported()){
       const hls = new Hls({ enableWorker:true });
       hls.loadSource(manifest);
       hls.attachMedia(player);
+      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+        // Add sidecar tracks once the media element is ready
+        attachSubtitles(player, path, name);
+      });
       hls.on(Hls.Events.MANIFEST_PARSED, () => player.play().catch(()=>{}));
       hls.on(Hls.Events.ERROR, (ev,data) => console.warn('HLS error', data));
     } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari
       player.src = manifest;
-      player.addEventListener('loadedmetadata', () => player.play().catch(()=>{}), {once:true});
+      player.addEventListener('loadedmetadata', () => {
+        attachSubtitles(player, path, name);
+        player.play().catch(()=>{});
+      }, {once:true});
     } else {
       alert('Streaming is not supported by this browser.');
       return;

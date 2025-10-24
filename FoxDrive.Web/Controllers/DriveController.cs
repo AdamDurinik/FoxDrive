@@ -31,10 +31,10 @@ namespace FoxDrive.Web.Controllers
             IWebHostEnvironment env)
         {
             _storage = storage;
-            _shares  = shares;
+            _shares = shares;
 
             _ffmpegPath = config["Streaming:FfmpegPath"] ?? "ffmpeg"; // or full path to ffmpeg.exe
-            _hlsCache   = config["Streaming:CacheDir"]
+            _hlsCache = config["Streaming:CacheDir"]
                         ?? Path.Combine(env.ContentRootPath, "Data", "streamcache");
 
             Directory.CreateDirectory(_hlsCache);
@@ -60,7 +60,8 @@ namespace FoxDrive.Web.Controllers
             var test = System.IO.File.Exists(manifest);
             Directory.CreateDirectory(outDir);
 
-            var psi = new ProcessStartInfo {
+            var psi = new ProcessStartInfo
+            {
                 FileName = _ffmpegPath,
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -151,16 +152,17 @@ namespace FoxDrive.Web.Controllers
                 ".ogv" => "video/ogg",
                 ".mov" => "video/quicktime",
                 ".mkv" => "video/x-matroska",
-
                 ".mp3" => "audio/mpeg",
                 ".m4a" => "audio/mp4",
                 ".aac" => "audio/aac",
                 ".wav" => "audio/wav",
                 ".ogg" => "audio/ogg",
-                _ => new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider()
+                ".vtt" => "text/vtt",
+                _ => new FileExtensionContentTypeProvider()
                         .TryGetContentType(fileName, out var ct) ? ct : "application/octet-stream"
             };
         }
+
         [HttpGet("hls/manifest")]
         public IActionResult HlsManifest([FromQuery] string? path, [FromQuery] string name)
         {
@@ -177,9 +179,9 @@ namespace FoxDrive.Web.Controllers
             var manifestPath = Path.Combine(dir, "index.m3u8");
 
             // 🔒 make sure m3u8 isn’t cached by browser/CDN
-            Response.Headers["Cache-Control"]     = "no-store, no-cache, must-revalidate";
-            Response.Headers["Pragma"]            = "no-cache";
-            Response.Headers["Expires"]           = "0";
+            Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
             Response.Headers["Surrogate-Control"] = "no-store";
 
             // ⏳ wait up to ~2s until the playlist is actually playable (has at least one .ts)
@@ -371,41 +373,6 @@ namespace FoxDrive.Web.Controllers
             return NoContent();
         }
 
-
-        // [HttpGet("download")]
-        // public IActionResult Download([FromQuery] string? path, [FromQuery] string name)
-        // {
-        //     var (owner, rel, _) = Resolve(path);
-        //     var fullRel = Path.Combine(rel, name);
-        //     if (!_shares.CanRead(CurrentUser, owner, fullRel)) return Forbid();
-
-        //     var stream = _storage.Read(owner, fullRel);
-        //     return File(stream, "application/octet-stream", name);
-        // }
-
-        // [HttpGet("open")]
-        // public IActionResult Open([FromQuery] string? path, [FromQuery] string name)
-        // {
-        //     var (owner, rel, _) = Resolve(path);
-        //     var fullRel = Path.Combine(rel, name);
-        //     if (!_shares.CanRead(CurrentUser, owner, fullRel)) return Forbid();
-
-        //     var ext = Path.GetExtension(name).ToLowerInvariant();
-        //     var mime = ext switch
-        //     {
-        //         ".png" => "image/png",
-        //         ".jpg" or ".jpeg" => "image/jpeg",
-        //         ".gif" => "image/gif",
-        //         ".webp" => "image/webp",
-        //         ".svg" => "image/svg+xml",
-        //         ".bmp" => "image/bmp",
-        //         ".pdf" => "application/pdf",
-        //         _ => "application/octet-stream"
-        //     };
-
-        //     var stream = _storage.Read(owner, fullRel);
-        //     return File(stream, mime);
-        // }
         [HttpGet("download")]
         public IActionResult Download([FromQuery] string? path, [FromQuery] string name)
         {
@@ -470,6 +437,52 @@ namespace FoxDrive.Web.Controllers
 
             _storage.Move(fromOwner, fromRel, req.Name, toOwner, toRel);
             return NoContent();
+        }
+    
+    [HttpGet("subs/list")]
+        public IActionResult ListSubs([FromQuery] string? path, [FromQuery] string name)
+        {
+            var (owner, rel, _) = Resolve(path);
+            var fullRel = Path.Combine(rel ?? "", name);
+            if (!_shares.CanRead(CurrentUser, owner, fullRel)) return Forbid();
+
+            var abs = _storage.MapToAbsolute(owner, fullRel);
+            if (!System.IO.File.Exists(abs)) return NotFound();
+
+            var psi = new ProcessStartInfo {
+                FileName = "ffprobe",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+            psi.ArgumentList.Add("-v"); psi.ArgumentList.Add("error");
+            psi.ArgumentList.Add("-select_streams"); psi.ArgumentList.Add("s");
+            psi.ArgumentList.Add("-show_entries"); psi.ArgumentList.Add("stream=index:stream_tags=language,title");
+            psi.ArgumentList.Add("-of"); psi.ArgumentList.Add("csv=p=0:s=|");
+            psi.ArgumentList.Add(abs);
+
+            using var p = Process.Start(psi)!;
+            var csv = p.StandardOutput.ReadToEnd();
+            p.WaitForExit();
+
+            var list = new List<object>();
+            foreach (var line in csv.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = line.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0) continue;
+
+                var idx = int.Parse(parts[0]);
+                string? lang = null, title = null;
+                foreach (var part in parts.Skip(1))
+                {
+                    var kv = part.Split('=', 2);
+                    if (kv.Length != 2) continue;
+                    if (kv[0] == "language") lang = kv[1];
+                    else if (kv[0] == "title") title = kv[1];
+                }
+                list.Add(new { index = idx, lang = lang ?? "", label = title ?? (lang?.ToUpperInvariant() ?? $"Sub {idx}") });
+            }
+            return Ok(list);
         }
     }
 }

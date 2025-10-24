@@ -11,12 +11,19 @@
 </head>
 <body>
 
-<header class="site-header">
-  <div class="brand">
-    <img src="~/Resources/FoxDen.svg" alt="FoxDen" />
-    <span>FoxDen</span>
-  </div>
-  <div class="header-actions">
+
+<header>
+    <div style="font-weight:600; display:flex; align-items:center; gap:6px;">
+        <span>FoxDen</span>
+        @if (User?.Identity?.IsAuthenticated ?? false)
+        {
+            <span class="brand-user">@User.Identity!.Name</span>
+        }
+    </div>
+
+
+    <div class="header-actions">
+    <a class="btn" href="/">Home</a>
     <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post">
       @Html.AntiForgeryToken()
       <button type="submit" class="btn danger">Logout</button>

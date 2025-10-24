@@ -1,14 +1,143 @@
 @{
-    ViewData["Title"] = "Tasks";
+    ViewData["Title"] = "FoxDen – Tasks";
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>@ViewData["Title"]</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+  <style>
+    .groups { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+    .group { border:1px solid var(--line); border-radius:12px; padding:10px; background:var(--card-bg,#111); display:flex; flex-direction:column; }
+    .group.done { opacity:.6; text-decoration:line-through; }
+    .group-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+    .tasks{display:flex;flex-direction:column;gap:6px;}
+    .task{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;border:1px solid var(--line);border-radius:6px;}
+    .task.done{opacity:.6;text-decoration:line-through;}
+    .add-form{display:flex;gap:6px;margin-top:6px;}
+    .add-form input{flex:1;}
+    .add-group{border:2px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:140px;font-size:32px;}
+  </style>
+</head>
+<body>
+
 <header>
-    <div style="font-weight:600">Tasks</div>
-    <a class="btn" href="/">← Home</a>
+    <div style="font-weight:600; display:flex; align-items:center; gap:6px;">
+        <span>FoxDen</span>
+        @if (User?.Identity?.IsAuthenticated ?? false)
+        {
+            <span class="brand-user">@User.Identity!.Name</span>
+        }
+    </div>
+
+
+    <div class="header-actions">
+    <a class="btn" href="/">Home</a>
+    <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post">
+      @Html.AntiForgeryToken()
+      <button type="submit" class="btn danger">Logout</button>
+    </form>
+  </div>
 </header>
 
-<main>
-    <div class="card" style="margin-top:20px">
-        <div class="title">Coming soon</div>
-        <p style="color:var(--muted)">Shared household tasks will live here.</p>
+<main class="mt-16">
+  <div class="card">
+    <div class="title">Task Groups</div>
+    <div id="groups" class="groups">
+      <div id="addGroup" class="add-group" title="Add new group">+</div>
     </div>
+  </div>
 </main>
+
+<script>
+function antiForgery(){
+  const f=document.querySelector('#logoutForm input[name="__RequestVerificationToken"]');
+  return f?f.value:'';
+}
+
+async function apiGet(){const r=await fetch('/api/task',{cache:'no-store'});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function apiCreateGroup(name){const r=await fetch('/api/task/group',{method:'POST',headers:{'Content-Type':'application/json','RequestVerificationToken':antiForgery()},body:JSON.stringify({name})});if(!r.ok)throw new Error(await r.text());}
+async function apiToggleGroup(id){await fetch(`/api/task/group/${id}/toggle`,{method:'POST',headers:{'RequestVerificationToken':antiForgery()}});}
+async function apiDeleteGroup(id){await fetch(`/api/task/group/${id}`,{method:'DELETE',headers:{'RequestVerificationToken':antiForgery()}});}
+async function apiCreateTask(gid,text){const r=await fetch('/api/task/task',{method:'POST',headers:{'Content-Type':'application/json','RequestVerificationToken':antiForgery()},body:JSON.stringify({groupId:gid,text})});if(!r.ok)throw new Error(await r.text());}
+async function apiToggleTask(id){await fetch(`/api/task/task/${id}/toggle`,{method:'POST',headers:{'RequestVerificationToken':antiForgery()}});}
+async function apiDeleteTask(id){await fetch(`/api/task/task/${id}`,{method:'DELETE',headers:{'RequestVerificationToken':antiForgery()}});}
+
+const wrap=document.getElementById('groups'), addBtn=document.getElementById('addGroup');
+
+function renderGroup(g){
+  const div=document.createElement('div');
+  div.className='group'+(g.done?' done':'');
+  div.dataset.id=g.id;
+  div.innerHTML=`
+    <div class="group-header">
+      <div>${g.name}</div>
+      <div>
+        <button class="btn icon ${g.done?'':'primary'}" data-act="toggle-group">${g.done?'↩️':'✔️'}</button>
+        <button class="btn icon danger" data-act="del-group">🗑️</button>
+      </div>
+    </div>
+    <div class="tasks">
+      ${g.items.map(t=>`
+        <div class="task ${t.done?'done':''}" data-task="${t.id}">
+          <span>${t.text}</span>
+          <div>
+            <button class="btn icon ${t.done?'':'primary'}" data-act="toggle-task">${t.done?'↩️':'✔️'}</button>
+            <button class="btn icon danger" data-act="del-task">🗑️</button>
+          </div>
+        </div>`).join('')}
+    </div>
+    <form class="add-form" data-act="add-task">
+      <input name="text" placeholder="Add task..." autocomplete="off"/>
+      <button class="btn primary" type="submit">Add</button>
+    </form>`;
+  return div;
+}
+
+async function render(){
+  const data=await apiGet();
+  wrap.querySelectorAll('.group').forEach(e=>e.remove());
+  for(const g of data){
+    wrap.insertBefore(renderGroup(g),addBtn);
+  }
+}
+
+addBtn.onclick=async()=>{
+  const name=prompt('Group name:');
+  if(!name)return;
+  await apiCreateGroup(name.trim());
+  render();
+};
+
+wrap.addEventListener('click',async e=>{
+  const btn=e.target.closest('button[data-act]');
+  if(!btn)return;
+  const act=btn.dataset.act;
+  const group=btn.closest('.group');
+  const gid=parseInt(group?.dataset.id||'0',10);
+
+  if(act==='toggle-group'){await apiToggleGroup(gid);render();return;}
+  if(act==='del-group'){if(confirm('Delete group and all tasks?')){await apiDeleteGroup(gid);render();}return;}
+
+  const taskEl=btn.closest('.task');
+  if(act==='toggle-task'){const tid=taskEl.dataset.task;await apiToggleTask(tid);render();return;}
+  if(act==='del-task'){const tid=taskEl.dataset.task;if(confirm('Delete task?')){await apiDeleteTask(tid);render();}return;}
+});
+
+wrap.addEventListener('submit',async e=>{
+  if(!e.target.matches('form[data-act="add-task"]'))return;
+  e.preventDefault();
+  const gid=parseInt(e.target.closest('.group').dataset.id||'0',10);
+  const text=e.target.text.value.trim();
+  if(!text)return;
+  await apiCreateTask(gid,text);
+  e.target.reset();
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

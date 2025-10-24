@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using FoxDrive.Data;
+using FoxDen.Web.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,10 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
         ?? "Data Source=D:\\FoxData\\foxdrive_users.db;Mode=ReadWriteCreate;Cache=Shared"));
 
 builder.Services.AddDbContext<ShoppingDbContext>(opt =>
+    opt.UseSqlite(builder.Configuration.GetConnectionString("FoxDen")
+        ?? "Data Source=D:\\FoxData\\foxden.db;Mode=ReadWriteCreate;Cache=Shared"));
+
+builder.Services.AddDbContext<TaskDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("FoxDen")
         ?? "Data Source=D:\\FoxData\\foxden.db;Mode=ReadWriteCreate;Cache=Shared"));
 

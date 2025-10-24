@@ -35,7 +35,7 @@ public class AuthController : Controller
             ViewData["ReturnUrl"] = returnUrl;
             return View("Login");
         }
-        if(user.Role != UserRole.Admin)
+        if(user.Role != UserRole.Admin && user.Role != UserRole.User)
         {
             ModelState.AddModelError(string.Empty, "Access denied.");
             ViewData["ReturnUrl"] = returnUrl;

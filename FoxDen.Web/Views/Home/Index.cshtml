@@ -3,11 +3,22 @@
 }
 
 <header>
-    <div style="font-weight:600">FoxDen</div>
-    <form asp-controller="Auth" asp-action="Logout" method="post" style="margin-left:auto">
-        @Html.AntiForgeryToken()
-        <button type="submit" class="btn danger">Logout</button>
+    <div style="font-weight:600; display:flex; align-items:center; gap:6px;">
+        <span>FoxDen</span>
+        @if (User?.Identity?.IsAuthenticated ?? false)
+        {
+            <span class="brand-user">@User.Identity!.Name</span>
+        }
+    </div>
+
+
+    <div class="header-actions">
+    <a class="btn" href="/">Home</a>
+    <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post">
+      @Html.AntiForgeryToken()
+      <button type="submit" class="btn danger">Logout</button>
     </form>
+  </div>
 </header>
 
 <main>

@@ -59,7 +59,6 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// If you want CLI commands (adduser/listusers/etc.), keep them here:
 if (args.Length > 0)
 {
     using var scope = app.Services.CreateScope();
