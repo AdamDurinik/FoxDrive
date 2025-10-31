@@ -18,11 +18,13 @@ public class HomeController : Controller
         {
             Cpu = _sys.GetCpuUsage(),
             Memory = _sys.GetMemoryUsage(),
-            Disks = _sys.GetDiskUsage("C:\\", "F:\\"),
-            FoxDriveRunning = _sys.IsProcessRunning("FoxDrive.Web"),
-            PortfolioRunning = _sys.IsProcessRunning("Portfolio.Web"),
-            FoxDenRunning = _sys.IsProcessRunning("FoxDen.Web") 
+            // safer: ignore drives that don't exist/inaccessible in prod
+            Disks = _sys.GetDiskUsageSafe(@"C:\", @"F:\"),
 
+            // robust in deploy regardless of exe vs. dll host
+            FoxDriveRunning  = _sys.IsPortListening(5010),
+            PortfolioRunning = _sys.IsPortListening(5173),
+            FoxDenRunning    = _sys.IsPortListening(5228),
         };
         return View(model);
     }

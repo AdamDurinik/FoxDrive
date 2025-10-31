@@ -19,26 +19,25 @@ public class SystemController : ControllerBase
     [HttpGet("stats")]
     public IActionResult Stats()
     {
-        var cpu = _sys.GetCpuUsage();
-        var mem = _sys.GetMemoryUsage();
-        var disks = _sys.GetDiskUsage("C:\\", "D:\\", "F:\\");
-        var net = _sys.GetNetworkUsage();
+        var cpu   = _sys.GetCpuUsage();
+        var mem   = _sys.GetMemoryUsage();
+        var disks = _sys.GetDiskUsageSafe(@"C:\", @"D:\", @"F:\");   // skips missing drives
+        var net   = _sys.GetNetworkUsage();
 
         var data = new
         {
-            cpu = new { used = cpu.ToString("F1"), total = "100" },
+            cpu    = new { used = cpu.ToString("F1"), total = "100" },
             memory = new { used = mem.ToString("F1"), total = "100" },
             disks,
             network = new { sent = net.sentMbps.ToString("F2"), recv = net.recvMbps.ToString("F2") },
             apps = new
             {
-                foxdrive = _sys.IsProcessRunning("FoxDrive.Web"),
-                portfolio = _sys.IsProcessRunning("Portfolio.Web"),
-                foxden = _sys.IsProcessRunning("FoxDen.Web"),
+                foxdrive  = _sys.IsPortListening(5010),
+                portfolio = _sys.IsPortListening(5173),
+                foxden    = _sys.IsPortListening(5228),
             }
         };
 
         return Ok(data);
     }
-
 }

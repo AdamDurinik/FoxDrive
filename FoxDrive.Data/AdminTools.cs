@@ -20,6 +20,12 @@ namespace FoxDrive.Data
                 return 1;
             }
 
+            if (args[0].ToLowerInvariant().StartsWith("--urls"))
+            {
+                Console.WriteLine("URLS command, no action taken.");
+                return 0;
+            }
+
             var db = services.GetRequiredService<AppDbContext>();
 
             switch (args[0].ToLowerInvariant())

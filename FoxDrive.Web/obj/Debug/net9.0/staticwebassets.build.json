@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "2Z3ooGZaKZiwu/N31K2hpmFmeHgoJKOZPAJTe9l9nl0=",
+  "Hash": "bahjHzuu0FExr80u3nvW3C5o3UIyCyEaumzjKlrqDt8=",
   "Source": "FoxDrive.Web",
   "BasePath": "_content/FoxDrive.Web",
   "Mode": "Default",
@@ -794,12 +794,12 @@
       "OriginalItemSpec": "F:\\FoxDrive\\FoxDrive.Web\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap-utilities.min.css"
     },
     {
-      "Identity": "F:\\FoxDrive\\FoxDrive.Web\\obj\\Debug\\net9.0\\compressed\\l63gmk450i-lzl9nlhx6b.gz",
+      "Identity": "F:\\FoxDrive\\FoxDrive.Web\\obj\\Debug\\net9.0\\compressed\\l63gmk450i-69i101dd84.gz",
       "SourceId": "FoxDrive.Web",
       "SourceType": "Discovered",
       "ContentRoot": "F:\\FoxDrive\\FoxDrive.Web\\obj\\Debug\\net9.0\\compressed\\",
       "BasePath": "_content/FoxDrive.Web",
-      "RelativePath": "lib/jquery-validation/dist/jquery.validate#[.{fingerprint=lzl9nlhx6b}]?.js.gz",
+      "RelativePath": "lib/jquery-validation/dist/jquery.validate#[.{fingerprint=69i101dd84}]?.js.gz",
       "AssetKind": "All",
       "AssetMode": "All",
       "AssetRole": "Alternative",
@@ -808,8 +808,8 @@
       "RelatedAsset": "F:\\FoxDrive\\FoxDrive.Web\\wwwroot\\lib\\jquery-validation\\dist\\jquery.validate.js",
       "AssetTraitName": "Content-Encoding",
       "AssetTraitValue": "gzip",
-      "Fingerprint": "anlp8nykfw",
-      "Integrity": "KuJPTvhuArDs4mj2zziNxM+hBWFbOhi0BKQgeR1pHG8=",
+      "Fingerprint": "du4nkpraeq",
+      "Integrity": "RUCmioGWcchGyGrlXMN3uFhZ9817fp/cvH4nC0t6QnA=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "F:\\FoxDrive\\FoxDrive.Web\\wwwroot\\lib\\jquery-validation\\dist\\jquery.validate.js"
@@ -2593,8 +2593,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "",
       "AssetTraitValue": "",
-      "Fingerprint": "lzl9nlhx6b",
-      "Integrity": "kRL82372ur5YrVTjFWp9muao9yeU8AoLiJxSb5ekmHg=",
+      "Fingerprint": "69i101dd84",
+      "Integrity": "qsYQITGtWNsIDoAHsXwgLSrKZWtkI+eIM1k5WoKe9HE=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\lib\\jquery-validation\\dist\\jquery.validate.js"
@@ -19049,13 +19049,13 @@
       ]
     },
     {
-      "Route": "lib/jquery-validation/dist/jquery.validate.js",
-      "AssetFile": "F:\\FoxDrive\\FoxDrive.Web\\obj\\Debug\\net9.0\\compressed\\l63gmk450i-lzl9nlhx6b.gz",
+      "Route": "lib/jquery-validation/dist/jquery.validate.69i101dd84.js",
+      "AssetFile": "F:\\FoxDrive\\FoxDrive.Web\\obj\\Debug\\net9.0\\compressed\\l63gmk450i-69i101dd84.gz",
       "Selectors": [
         {
           "Name": "Content-Encoding",
           "Value": "gzip",
-          "Quality": "0.000071078257"
+          "Quality": "0.000071546111"
         }
       ],
       "ResponseHeaders": [
@@ -19065,19 +19065,19 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "14068"
+          "Value": "13976"
         },
         {
           "Name": "ETag",
-          "Value": "\"KuJPTvhuArDs4mj2zziNxM+hBWFbOhi0BKQgeR1pHG8=\""
+          "Value": "\"RUCmioGWcchGyGrlXMN3uFhZ9817fp/cvH4nC0t6QnA=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Wed, 27 Aug 2025 16:50:06 GMT"
+          "Value": "Fri, 24 Oct 2025 22:52:05 GMT"
         },
         {
           "Name": "Cache-Control",
-          "Value": "no-cache"
+          "Value": "max-age=31536000, immutable"
         },
         {
           "Name": "Content-Encoding",
@@ -19093,18 +19093,26 @@
         },
         {
           "Name": "ETag",
-          "Value": "W/\"kRL82372ur5YrVTjFWp9muao9yeU8AoLiJxSb5ekmHg=\""
+          "Value": "W/\"qsYQITGtWNsIDoAHsXwgLSrKZWtkI+eIM1k5WoKe9HE=\""
         }
       ],
       "EndpointProperties": [
         {
+          "Name": "fingerprint",
+          "Value": "69i101dd84"
+        },
+        {
+          "Name": "label",
+          "Value": "lib/jquery-validation/dist/jquery.validate.js"
+        },
+        {
           "Name": "integrity",
-          "Value": "sha256-kRL82372ur5YrVTjFWp9muao9yeU8AoLiJxSb5ekmHg="
+          "Value": "sha256-qsYQITGtWNsIDoAHsXwgLSrKZWtkI+eIM1k5WoKe9HE="
         }
       ]
     },
     {
-      "Route": "lib/jquery-validation/dist/jquery.validate.js",
+      "Route": "lib/jquery-validation/dist/jquery.validate.69i101dd84.js",
       "AssetFile": "F:\\FoxDrive\\FoxDrive.Web\\wwwroot\\lib\\jquery-validation\\dist\\jquery.validate.js",
       "Selectors": [],
       "ResponseHeaders": [
@@ -19114,7 +19122,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "52536"
+          "Value": "52302"
         },
         {
           "Name": "Content-Type",
@@ -19122,121 +19130,21 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"kRL82372ur5YrVTjFWp9muao9yeU8AoLiJxSb5ekmHg=\""
+          "Value": "\"qsYQITGtWNsIDoAHsXwgLSrKZWtkI+eIM1k5WoKe9HE=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Wed, 27 Aug 2025 16:50:06 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "no-cache"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "integrity",
-          "Value": "sha256-kRL82372ur5YrVTjFWp9muao9yeU8AoLiJxSb5ekmHg="
-        }
-      ]
-    },
-    {
-      "Route": "lib/jquery-validation/dist/jquery.validate.js.gz",
-      "AssetFile": "F:\\FoxDrive\\FoxDrive.Web\\obj\\Debug\\net9.0\\compressed\\l63gmk450i-lzl9nlhx6b.gz",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "14068"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/javascript"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"KuJPTvhuArDs4mj2zziNxM+hBWFbOhi0BKQgeR1pHG8=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Wed, 27 Aug 2025 16:50:06 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "no-cache"
-        },
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip"
-        },
-        {
-          "Name": "Vary",
-          "Value": "Content-Encoding"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "integrity",
-          "Value": "sha256-KuJPTvhuArDs4mj2zziNxM+hBWFbOhi0BKQgeR1pHG8="
-        }
-      ]
-    },
-    {
-      "Route": "lib/jquery-validation/dist/jquery.validate.lzl9nlhx6b.js",
-      "AssetFile": "F:\\FoxDrive\\FoxDrive.Web\\obj\\Debug\\net9.0\\compressed\\l63gmk450i-lzl9nlhx6b.gz",
-      "Selectors": [
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip",
-          "Quality": "0.000071078257"
-        }
-      ],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "14068"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"KuJPTvhuArDs4mj2zziNxM+hBWFbOhi0BKQgeR1pHG8=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Wed, 27 Aug 2025 16:50:06 GMT"
+          "Value": "Fri, 24 Oct 2025 22:52:05 GMT"
         },
         {
           "Name": "Cache-Control",
           "Value": "max-age=31536000, immutable"
-        },
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip"
-        },
-        {
-          "Name": "Vary",
-          "Value": "Content-Encoding"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/javascript"
-        },
-        {
-          "Name": "ETag",
-          "Value": "W/\"kRL82372ur5YrVTjFWp9muao9yeU8AoLiJxSb5ekmHg=\""
         }
       ],
       "EndpointProperties": [
         {
           "Name": "fingerprint",
-          "Value": "lzl9nlhx6b"
+          "Value": "69i101dd84"
         },
         {
           "Name": "label",
@@ -19244,13 +19152,13 @@
         },
         {
           "Name": "integrity",
-          "Value": "sha256-kRL82372ur5YrVTjFWp9muao9yeU8AoLiJxSb5ekmHg="
+          "Value": "sha256-qsYQITGtWNsIDoAHsXwgLSrKZWtkI+eIM1k5WoKe9HE="
         }
       ]
     },
     {
-      "Route": "lib/jquery-validation/dist/jquery.validate.lzl9nlhx6b.js",
-      "AssetFile": "F:\\FoxDrive\\FoxDrive.Web\\wwwroot\\lib\\jquery-validation\\dist\\jquery.validate.js",
+      "Route": "lib/jquery-validation/dist/jquery.validate.69i101dd84.js.gz",
+      "AssetFile": "F:\\FoxDrive\\FoxDrive.Web\\obj\\Debug\\net9.0\\compressed\\l63gmk450i-69i101dd84.gz",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -19259,7 +19167,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "52536"
+          "Value": "13976"
         },
         {
           "Name": "Content-Type",
@@ -19267,56 +19175,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"kRL82372ur5YrVTjFWp9muao9yeU8AoLiJxSb5ekmHg=\""
+          "Value": "\"RUCmioGWcchGyGrlXMN3uFhZ9817fp/cvH4nC0t6QnA=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Wed, 27 Aug 2025 16:50:06 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "lzl9nlhx6b"
-        },
-        {
-          "Name": "label",
-          "Value": "lib/jquery-validation/dist/jquery.validate.js"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-kRL82372ur5YrVTjFWp9muao9yeU8AoLiJxSb5ekmHg="
-        }
-      ]
-    },
-    {
-      "Route": "lib/jquery-validation/dist/jquery.validate.lzl9nlhx6b.js.gz",
-      "AssetFile": "F:\\FoxDrive\\FoxDrive.Web\\obj\\Debug\\net9.0\\compressed\\l63gmk450i-lzl9nlhx6b.gz",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "14068"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/javascript"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"KuJPTvhuArDs4mj2zziNxM+hBWFbOhi0BKQgeR1pHG8=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Wed, 27 Aug 2025 16:50:06 GMT"
+          "Value": "Fri, 24 Oct 2025 22:52:05 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -19334,7 +19197,7 @@
       "EndpointProperties": [
         {
           "Name": "fingerprint",
-          "Value": "lzl9nlhx6b"
+          "Value": "69i101dd84"
         },
         {
           "Name": "label",
@@ -19342,7 +19205,144 @@
         },
         {
           "Name": "integrity",
-          "Value": "sha256-KuJPTvhuArDs4mj2zziNxM+hBWFbOhi0BKQgeR1pHG8="
+          "Value": "sha256-RUCmioGWcchGyGrlXMN3uFhZ9817fp/cvH4nC0t6QnA="
+        }
+      ]
+    },
+    {
+      "Route": "lib/jquery-validation/dist/jquery.validate.js",
+      "AssetFile": "F:\\FoxDrive\\FoxDrive.Web\\obj\\Debug\\net9.0\\compressed\\l63gmk450i-69i101dd84.gz",
+      "Selectors": [
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip",
+          "Quality": "0.000071546111"
+        }
+      ],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "13976"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"RUCmioGWcchGyGrlXMN3uFhZ9817fp/cvH4nC0t6QnA=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Fri, 24 Oct 2025 22:52:05 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        },
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip"
+        },
+        {
+          "Name": "Vary",
+          "Value": "Content-Encoding"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "W/\"qsYQITGtWNsIDoAHsXwgLSrKZWtkI+eIM1k5WoKe9HE=\""
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-qsYQITGtWNsIDoAHsXwgLSrKZWtkI+eIM1k5WoKe9HE="
+        }
+      ]
+    },
+    {
+      "Route": "lib/jquery-validation/dist/jquery.validate.js",
+      "AssetFile": "F:\\FoxDrive\\FoxDrive.Web\\wwwroot\\lib\\jquery-validation\\dist\\jquery.validate.js",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "52302"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"qsYQITGtWNsIDoAHsXwgLSrKZWtkI+eIM1k5WoKe9HE=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Fri, 24 Oct 2025 22:52:05 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-qsYQITGtWNsIDoAHsXwgLSrKZWtkI+eIM1k5WoKe9HE="
+        }
+      ]
+    },
+    {
+      "Route": "lib/jquery-validation/dist/jquery.validate.js.gz",
+      "AssetFile": "F:\\FoxDrive\\FoxDrive.Web\\obj\\Debug\\net9.0\\compressed\\l63gmk450i-69i101dd84.gz",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "13976"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"RUCmioGWcchGyGrlXMN3uFhZ9817fp/cvH4nC0t6QnA=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Fri, 24 Oct 2025 22:52:05 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        },
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip"
+        },
+        {
+          "Name": "Vary",
+          "Value": "Content-Encoding"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-RUCmioGWcchGyGrlXMN3uFhZ9817fp/cvH4nC0t6QnA="
         }
       ]
     },

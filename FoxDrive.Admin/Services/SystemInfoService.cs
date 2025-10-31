@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
+using System.IO;
 
 namespace FoxDrive.Admin.Services;
 
@@ -9,12 +11,10 @@ public class SystemInfoService
     public float GetCpuUsage()
     {
         using var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-        // First call always 0, need a small wait
-        _ = cpuCounter.NextValue();
+        _ = cpuCounter.NextValue();           // warm-up
         Thread.Sleep(500);
         return cpuCounter.NextValue();
     }
-
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
     public class MEMORYSTATUSEX
@@ -41,13 +41,12 @@ public class SystemInfoService
         {
             ulong total = memStatus.ullTotalPhys;
             ulong avail = memStatus.ullAvailPhys;
-            return ((float)(total - avail) / total) * 100f;
+            return (float)(total - avail) / total * 100f;
         }
         return -1;
     }
 
-
-
+    // Original method (kept)
     public Dictionary<string, float> GetDiskUsage(params string[] drives)
     {
         var result = new Dictionary<string, float>();
@@ -57,17 +56,69 @@ public class SystemInfoService
             if (d.IsReady)
             {
                 float used = (float)(d.TotalSize - d.AvailableFreeSpace) / d.TotalSize * 100f;
-                result[d.Name] = used;
+                result[d.Name.TrimEnd('\\')] = used;
             }
         }
         return result;
     }
 
+    // Safer variant for prod: skips missing/inaccessible drives automatically
+    public Dictionary<string, float> GetDiskUsageSafe(params string[] roots)
+    {
+        if (roots == null || roots.Length == 0)
+        {
+            roots = DriveInfo.GetDrives()
+                .Where(d => d.IsReady && d.DriveType == DriveType.Fixed)
+                .Select(d => d.RootDirectory.FullName)
+                .ToArray();
+        }
+
+        var result = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+        foreach (var r in roots.Where(p => !string.IsNullOrWhiteSpace(p)))
+        {
+            try
+            {
+                var di = new DriveInfo(Path.GetPathRoot(r)!);
+                if (!di.IsReady) continue;
+
+                var used = di.TotalSize - di.AvailableFreeSpace;
+                var pct = di.TotalSize > 0 ? (float)(used * 100.0 / di.TotalSize) : 0f;
+                result[di.Name.TrimEnd('\\')] = pct;
+            }
+            catch
+            {
+                // ignore non-existent/inaccessible drives
+            }
+        }
+        return result;
+    }
+
+    // Original method (kept) – process name only (works for self-contained exe)
     public bool IsProcessRunning(string name)
     {
         return Process.GetProcessesByName(name).Any();
     }
 
+    /// <summary>
+    /// Robust in deployment: true if something is listening on localhost:port.
+    /// Works whether the app runs as .exe or as dotnet + .dll.
+    /// </summary>
+    public bool IsPortListening(int port, int timeoutMs = 500)
+    {
+        try
+        {
+            using var c = new TcpClient();
+            var ar = c.BeginConnect("127.0.0.1", port, null, null);
+            if (!ar.AsyncWaitHandle.WaitOne(timeoutMs)) return false;
+            return c.Connected;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // Your network sampler (unchanged; note it returns MB delta since last call, not Mbps)
     public (float sentMbps, float recvMbps) GetNetworkUsage(string? nicName = null)
     {
         var nics = NetworkInterface.GetAllNetworkInterfaces()
@@ -89,7 +140,7 @@ public class SystemInfoService
 
             if (_lastSamples.TryGetValue(key, out var last))
             {
-                sent += (bytesSent - last.sent) / 1024f / 1024f; // MB
+                sent += (bytesSent - last.sent) / 1024f / 1024f; // MB delta since last call
                 recv += (bytesRecv - last.recv) / 1024f / 1024f;
             }
 
@@ -99,5 +150,5 @@ public class SystemInfoService
         return (sent, recv);
     }
 
-    private Dictionary<string, (long sent, long recv)> _lastSamples = new();
+    private readonly Dictionary<string, (long sent, long recv)> _lastSamples = new();
 }

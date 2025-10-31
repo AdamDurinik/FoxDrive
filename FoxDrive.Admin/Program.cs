@@ -59,7 +59,7 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-if (args.Length > 0)
+if (args.Length > 0 && args.All(a => !a.ToLower().StartsWith("--urls")))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
