@@ -18,6 +18,11 @@ builder.Services.AddDbContext<TaskDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("FoxDen")
         ?? "Data Source=D:\\FoxData\\foxden.db;Mode=ReadWriteCreate;Cache=Shared"));
 
+builder.Services.AddDbContext<TodoDbContext>(opt =>
+    opt.UseSqlite(builder.Configuration.GetConnectionString("FoxDen")
+        ?? "Data Source=D:\\FoxData\\foxden.db;Mode=ReadWriteCreate;Cache=Shared"));
+        
+
 builder.Services.AddControllersWithViews();
 
 // Auth

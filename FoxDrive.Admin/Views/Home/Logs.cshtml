@@ -1,0 +1,169 @@
+@{
+    ViewData["Title"] = "Admin Logs";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>@ViewData["Title"]</title>
+  <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+<header>
+  <nav style="display:flex;gap:14px;align-items:center">
+    <a href="/home/dashboard" class="btn" style="text-decoration:none">Dashboard</a>
+    <a href="/home/logs" class="btn" style="text-decoration:none;background:var(--accent);color:black">Logs</a>
+  </nav>
+  <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post" style="margin-left:auto">
+    @Html.AntiForgeryToken()
+    <button type="submit" class="btn danger">Logout</button>
+  </form>
+</header>
+
+<main>
+  <div class="card" style="grid-column:1 / -1; margin-top:20px">
+    <div class="title" style="text-align:left;margin-bottom:10px">Logs</div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="web"       role="tab" aria-selected="true">Web</button>
+      <button class="tab"         data-tab="crash"     role="tab" aria-selected="false">Crash</button>
+      <button class="tab"         data-tab="minecraft" role="tab" aria-selected="false">Minecraft</button>
+    </div>
+
+    <!-- WEB (supervisor tail) -->
+    <section id="tab-web" class="tab-pane active" role="tabpanel" aria-labelledby="tab-web">
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin:8px 0">
+        <label class="meta">Lines</label>
+        <select id="webLines" class="btn"><option>200</option><option selected>500</option><option>1000</option></select>
+        <button class="btn" onclick="loadWeb()">Refresh</button>
+      </div>
+      <pre id="webLog" class="logbox">loading…</pre>
+    </section>
+
+    <!-- CRASH (last critical) -->
+    <section id="tab-crash" class="tab-pane" role="tabpanel" aria-labelledby="tab-crash">
+      <div id="crashMeta" class="meta" style="margin:8px 0">loading…</div>
+      <pre id="crashBox" class="logbox">loading…</pre>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <button class="btn" onclick="loadCrash()">Refresh</button>
+      </div>
+    </section>
+
+    <!-- MINECRAFT (latest.txt tail) -->
+    <section id="tab-minecraft" class="tab-pane" role="tabpanel" aria-labelledby="tab-minecraft">
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin:8px 0">
+        <label class="meta">Lines</label>
+        <select id="mcLines" class="btn"><option>200</option><option>500</option><option selected>1000</option></select>
+        <button class="btn" onclick="loadMc()">Refresh</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:8px 0">
+        <div style="display:flex;gap:8px;align-items:center">
+        <label class="meta">Command</label>
+        <input id="rconCmd" class="btn" style="min-width:380px;padding:6px 10px" placeholder="say Hello from web" />
+        <button class="btn" onclick="sendRcon()">Run</button>
+        </div>
+        <div class="meta">Output ↓</div>
+        </div>
+        <pre id="rconOut" class="logbox" style="height:120px;margin-bottom:8px">(RCON output here)</pre>
+      <pre id="mcLog" class="logbox">loading…</pre>
+    </section>
+  </div>
+</main>
+
+<style>
+.logbox {
+  background:#050b14;
+  color:#cce4ff;
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:10px;
+  height:420px;
+  overflow:auto;
+  white-space:pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size:12px;
+}
+.tabs { display:flex; gap:8px; margin-bottom:8px; }
+.tab {
+  background:#0e1626; color:#cce4ff; border:1px solid var(--border);
+  padding:6px 12px; border-radius:999px; cursor:pointer; font-weight:600;
+}
+.tab.active { background:var(--accent); color:#000; border-color:var(--accent); }
+.tab-pane { display:none; }
+.tab-pane.active { display:block; }
+.meta{color:var(--muted)}
+</style>
+
+<script>
+async function fetchText(url){
+  const r = await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.text();
+}
+async function fetchJson(url){
+  const r = await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json();
+}
+
+// loaders
+async function loadWeb(){
+  const n = document.getElementById('webLines').value;
+  const txt = await fetchText(`/api/logs/supervisor?tail=${n}`);
+  document.getElementById('webLog').textContent = txt || '[empty]';
+}
+async function loadCrash(){
+  const obj = await fetchJson('/api/logs/last-crash');
+  const meta = document.getElementById('crashMeta');
+  meta.textContent = obj && obj.when ? `${obj.when} | exitCode=${obj.exitCode} | file=${obj.fileName}` : 'No crashes found';
+  document.getElementById('crashBox').textContent = obj && obj.excerpt ? obj.excerpt : '[no excerpt]';
+}
+async function loadMc(){
+  const n = document.getElementById('mcLines').value;
+  const txt = await fetchText(`/api/logs/minecraft?tail=${n}`);
+  document.getElementById('mcLog').textContent = txt || '[empty]';
+}
+
+function antiForgery(){
+const f = document.querySelector('#logoutForm input[name="__RequestVerificationToken"]');
+return f ? f.value : '';
+}
+async function sendRcon(){
+const cmd = (document.getElementById('rconCmd').value||'').trim();
+if(!cmd) return;
+try{
+const r = await fetch('/api/logs/exec',{
+method:'POST',
+headers:{ 'Content-Type':'application/json','RequestVerificationToken': antiForgery() },
+body: JSON.stringify({ command: cmd })
+});
+const txt = r.ok ? (await r.json()).output : (await r.text());
+document.getElementById('rconOut').textContent = txt || '[no output]';
+}catch(e){
+document.getElementById('rconOut').textContent = 'ERR: ' + e.message;
+}
+}
+
+// tab logic with per-tab polling
+let poll = null;
+function setTab(name){
+  // header state
+  document.querySelectorAll('.tab').forEach(btn=>{
+    const on = btn.dataset.tab === name;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  // panes
+  document.querySelectorAll('.tab-pane').forEach(p=>{
+    p.classList.toggle('active', p.id === 'tab-'+name);
+  });
+  // polling
+  if (poll) { clearInterval(poll); poll = null; }
+  if (name === 'web')      { loadWeb();  poll = setInterval(loadWeb, 5000); }
+  else if (name === 'minecraft') { loadMc();   poll = setInterval(loadMc, 5000); }
+  else if (name === 'crash')     { loadCrash(); poll = setInterval(loadCrash, 20000); }
+}
+
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click', ()=>setTab(b.dataset.tab)));
+
+// init
+setTab('web');
+</script>
+</body>
+</html>

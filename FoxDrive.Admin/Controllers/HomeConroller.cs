@@ -11,20 +11,24 @@ public class HomeController : Controller
     public HomeController(SystemInfoService sys) => _sys = sys;
 
     public IActionResult Index() => RedirectToAction("Dashboard");
+    
+    [HttpGet("/home/logs")]
+    public IActionResult Logs() => View("Logs");    
 
     public IActionResult Dashboard()
     {
         var model = new DashboardViewModel
         {
             Cpu = _sys.GetCpuUsage(),
+            Gpu = _sys.GetGpuUsage(),
             Memory = _sys.GetMemoryUsage(),
             // safer: ignore drives that don't exist/inaccessible in prod
             Disks = _sys.GetDiskUsageSafe(@"C:\", @"F:\"),
 
             // robust in deploy regardless of exe vs. dll host
-            FoxDriveRunning  = _sys.IsPortListening(5010),
+            FoxDriveRunning = _sys.IsPortListening(5010),
             PortfolioRunning = _sys.IsPortListening(5173),
-            FoxDenRunning    = _sys.IsPortListening(5228),
+            FoxDenRunning = _sys.IsPortListening(5228),
         };
         return View(model);
     }
@@ -32,6 +36,7 @@ public class HomeController : Controller
 
 public class DashboardViewModel
 {
+    public float Gpu { get; set; }
     public float Cpu { get; set; }
     public float Memory { get; set; }
     public Dictionary<string, float> Disks { get; set; } = new();

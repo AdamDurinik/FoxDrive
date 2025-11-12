@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddSingleton<SystemInfoService>();
+builder.Services.AddSingleton<RconService>();
 
 // ONE DbContext: FoxDrive.Data.AppDbContext (shared)
 // Read from appsettings ConnectionStrings:AppDb, fallback is optional

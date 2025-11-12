@@ -13,7 +13,6 @@ public class TaskApiController : ControllerBase
     private readonly TaskDbContext _db;
     public TaskApiController(TaskDbContext db) => _db = db;
 
-    // ---- READ: groups with items
     [HttpGet("")]
     public async Task<IActionResult> GetAll()
     {

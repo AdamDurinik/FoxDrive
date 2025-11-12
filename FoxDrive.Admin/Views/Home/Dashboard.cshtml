@@ -12,11 +12,14 @@
 </head>
 <body>
 <header>
-    <div style="font-weight:600">FoxHint Admin</div>
-    <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post" style="margin-left:auto">
-        @Html.AntiForgeryToken()
-        <button type="submit" class="btn danger">Logout</button>
-    </form>
+  <nav style="display:flex;gap:14px;align-items:center">
+    <a href="/Home/Dashboard" class="btn" style="text-decoration:none">Dashboard</a>
+    <a href="/Home/Logs" class="btn" style="text-decoration:none">Logs</a>
+  </nav>
+  <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post" style="margin-left:auto">
+    @Html.AntiForgeryToken()
+    <button type="submit" class="btn danger">Logout</button>
+  </form>
 </header>
 
 <main>
@@ -27,7 +30,12 @@
             <canvas id="cpuChart" height="180"></canvas>
             <div id="cpuText" class="metric">-- / 100%</div>
         </div>
-
+        <!-- GPU -->
+        <div class="card">
+            <div class="title">GPU</div>
+            <canvas id="gpuChart" height="180"></canvas>
+            <div id="gpuText" class="metric">-- / 100%</div>
+        </div>
         <!-- Memory -->
         <div class="card">
             <div class="title">Memory</div>
@@ -158,7 +166,11 @@ async function loadStats(){
     const cpuUsed = num(data?.cpu?.used);
     cpuChart.data.datasets[0].data=[cpuUsed, Math.max(0,100-cpuUsed)]; cpuChart.update();
     document.getElementById("cpuText").textContent = `${cpuUsed.toFixed(1)}% / 100%`;
-
+@* 
+    const gpuUsed = num(data?.gpu?.used);
+    gpuChart.data.datasets[0].data=[gpuUsed, Math.max(0,100-gpuUsed)]; gpuChart.update();
+    document.getElementById("gpuText").textContent = `${gpuUsed.toFixed(1)}% / 100%`;
+     *@
     const memUsed = num(data?.memory?.used);
     memChart.data.datasets[0].data=[memUsed, Math.max(0,100-memUsed)]; memChart.update();
     document.getElementById("memText").textContent = `${memUsed.toFixed(1)}% / 100%`;

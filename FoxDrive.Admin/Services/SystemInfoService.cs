@@ -8,14 +8,7 @@ namespace FoxDrive.Admin.Services;
 
 public class SystemInfoService
 {
-    public float GetCpuUsage()
-    {
-        using var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-        _ = cpuCounter.NextValue();           // warm-up
-        Thread.Sleep(500);
-        return cpuCounter.NextValue();
-    }
-
+    
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
     public class MEMORYSTATUSEX
     {
@@ -34,6 +27,28 @@ public class SystemInfoService
     [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     static extern bool GlobalMemoryStatusEx([In, Out] MEMORYSTATUSEX lpBuffer);
 
+    public float GetCpuUsage()
+    {
+        using var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+        _ = cpuCounter.NextValue();           // warm-up
+        System.Threading.Thread.Sleep(500);  // wait a bit
+        return cpuCounter.NextValue();
+    }
+        
+    public float GetGpuUsage()
+    {
+        try
+        {
+            using var gpuCounter = new PerformanceCounter("GPU Engine", "Utilization Percentage", "engtype_3D");
+            _ = gpuCounter.NextValue();       // warm-up
+
+            return gpuCounter.NextValue();
+        }
+        catch
+        {
+            return -1; // GPU info not available
+        }
+    }
     public float GetMemoryUsage()
     {
         var memStatus = new MEMORYSTATUSEX();
