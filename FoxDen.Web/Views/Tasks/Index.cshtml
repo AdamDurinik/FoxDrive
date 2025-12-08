@@ -8,18 +8,6 @@
   <title>@ViewData["Title"]</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-  <style>
-    .groups { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
-    .group { border:1px solid var(--line); border-radius:12px; padding:10px; background:var(--card-bg,#111); display:flex; flex-direction:column; }
-    .group.done { opacity:.6; text-decoration:line-through; }
-    .group-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-    .tasks{display:flex;flex-direction:column;gap:6px;}
-    .task{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;border:1px solid var(--line);border-radius:6px;}
-    .task.done{opacity:.6;text-decoration:line-through;}
-    .add-form{display:flex;gap:6px;margin-top:6px;}
-    .add-form input{flex:1;}
-    .add-group{border:2px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:140px;font-size:32px;}
-  </style>
 </head>
 <body>
 
@@ -32,22 +20,48 @@
         }
     </div>
 
-
     <div class="header-actions">
-    <a class="btn" href="/">Home</a>
-    <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post">
-      @Html.AntiForgeryToken()
-      <button type="submit" class="btn danger">Logout</button>
-    </form>
-  </div>
+      <a class="btn" href="/">Home</a>
+      <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn danger">Logout</button>
+      </form>
+    </div>
 </header>
 
 <main class="mt-16">
-  <div class="card">
-    <div class="title">Task Groups</div>
-    <div id="groups" class="groups">
-      <div id="addGroup" class="add-group" title="Add new group">+</div>
+  <div class="card tasks-card">
+    <div class="tasks-header">
+      <div class="tasks-header-left">
+        <div class="title">Tasks</div>
+        <div class="task-stats">
+          Open: <span id="stat-open">0</span> ·
+          Done: <span id="stat-done">0</span>
+        </div>
+
+        <div class="hide-done-toggle">
+          <label class="switch">
+            <input type="checkbox" id="hideDoneToggle" />
+            <span class="slider"></span>
+          </label>
+          <span class="hide-done-label">Hide done</span>
+        </div>
+
+      </div>
+      <img src="/resources/LittleTaskFox.png" alt="Task fox" class="task-fox" />
     </div>
+
+    <div class="tasks-groups-title">
+      <span>Task Groups</span>
+    </div>
+
+    <div id="groups" class="groups">
+      <div id="addGroup" class="add-group" title="Add new group">
+        <img src="~/Resources/AddGroupFox.png" class="add-group-fox" alt="Add group fox" />
+        <span>Add group</span>
+      </div>
+    </div>
+
   </div>
 </main>
 
@@ -61,31 +75,69 @@ async function apiGet(){const r=await fetch('/api/task',{cache:'no-store'});if(!
 async function apiCreateGroup(name){const r=await fetch('/api/task/group',{method:'POST',headers:{'Content-Type':'application/json','RequestVerificationToken':antiForgery()},body:JSON.stringify({name})});if(!r.ok)throw new Error(await r.text());}
 async function apiToggleGroup(id){await fetch(`/api/task/group/${id}/toggle`,{method:'POST',headers:{'RequestVerificationToken':antiForgery()}});}
 async function apiDeleteGroup(id){await fetch(`/api/task/group/${id}`,{method:'DELETE',headers:{'RequestVerificationToken':antiForgery()}});}
+async function apiRenameGroup(id,name){const r=await fetch(`/api/task/group/${id}`,{method:'PUT',headers:{'Content-Type':'application/json','RequestVerificationToken':antiForgery()},body:JSON.stringify({name})});if(!r.ok)throw new Error(await r.text());}
+
 async function apiCreateTask(gid,text){const r=await fetch('/api/task/task',{method:'POST',headers:{'Content-Type':'application/json','RequestVerificationToken':antiForgery()},body:JSON.stringify({groupId:gid,text})});if(!r.ok)throw new Error(await r.text());}
 async function apiToggleTask(id){await fetch(`/api/task/task/${id}/toggle`,{method:'POST',headers:{'RequestVerificationToken':antiForgery()}});}
 async function apiDeleteTask(id){await fetch(`/api/task/task/${id}`,{method:'DELETE',headers:{'RequestVerificationToken':antiForgery()}});}
+async function apiRenameTask(id,text){const r=await fetch(`/api/task/task/${id}`,{method:'PUT',headers:{'Content-Type':'application/json','RequestVerificationToken':antiForgery()},body:JSON.stringify({text})});if(!r.ok)throw new Error(await r.text());}
 
-const wrap=document.getElementById('groups'), addBtn=document.getElementById('addGroup');
+const wrap=document.getElementById('groups'),
+      addBtn=document.getElementById('addGroup'),
+      hideDoneToggle=document.getElementById('hideDoneToggle'),
+      statOpen=document.getElementById('stat-open'),
+      statDone=document.getElementById('stat-done');
+
+const LS_COLLAPSED_KEY='foxden_tasks_collapsed';
+const LS_HIDE_DONE_KEY='foxden_tasks_hideDone';
+
+/* load saved UI state */
+const collapsedGroups = new Set(JSON.parse(localStorage.getItem(LS_COLLAPSED_KEY) || '[]'));
+let hideDone = localStorage.getItem(LS_HIDE_DONE_KEY)==='1';
+if(hideDoneToggle) hideDoneToggle.checked = hideDone;
+
+function saveCollapsed(){
+  localStorage.setItem(LS_COLLAPSED_KEY, JSON.stringify([...collapsedGroups]));
+}
 
 function renderGroup(g){
   const div=document.createElement('div');
-  div.className='group'+(g.done?' done':'');
+  const isCollapsed = collapsedGroups.has(g.id);
+  const openCount = g.items.filter(t=>!t.done).length;
+  const totalCount = g.items.length;
+
+  div.className='group'+(g.done?' done':'')+(isCollapsed?' collapsed':'');
   div.dataset.id=g.id;
+
   div.innerHTML=`
     <div class="group-header">
-      <div>${g.name}</div>
-      <div>
-        <button class="btn icon ${g.done?'':'primary'}" data-act="toggle-group">${g.done?'↩️':'✔️'}</button>
-        <button class="btn icon danger" data-act="del-group">🗑️</button>
+      <div class="group-head-left">
+        <button class="collapse-btn" type="button" data-act="collapse">
+          ${isCollapsed ? '▶' : '▼'}
+        </button>
+        <div class="group-title">${g.name}</div>
+      </div>
+      <div class="group-head-right">
+        <span class="group-count">${openCount}/${totalCount}</span>
+        <button class="btn icon ${g.done?'':'primary'}" data-act="toggle-group">
+          <img src="/Resources/${g.done ? 'task-undo.png' : 'task-check.png'}" class="icon-img" alt="">
+        </button>
+        <button class="btn icon danger" data-act="del-group">
+          <img src="/Resources/task-trash.png" class="icon-img" alt="">
+        </button>
       </div>
     </div>
     <div class="tasks">
       ${g.items.map(t=>`
         <div class="task ${t.done?'done':''}" data-task="${t.id}">
-          <span>${t.text}</span>
+          <span class="task-text">${t.text}</span>
           <div>
-            <button class="btn icon ${t.done?'':'primary'}" data-act="toggle-task">${t.done?'↩️':'✔️'}</button>
-            <button class="btn icon danger" data-act="del-task">🗑️</button>
+            <button class="btn icon ${t.done?'':'primary'}" data-act="toggle-task">
+              <img src="/Resources/${t.done ? 'task-undo.png' : 'task-check.png'}" class="icon-img" alt="">
+            </button>
+            <button class="btn icon danger" data-act="del-task">
+              <img src="/Resources/task-trash.png" class="icon-img" alt="">
+            </button>
           </div>
         </div>`).join('')}
     </div>
@@ -98,10 +150,27 @@ function renderGroup(g){
 
 async function render(){
   const data=await apiGet();
+
   wrap.querySelectorAll('.group').forEach(e=>e.remove());
+
+  let totalOpen=0,totalDone=0;
+
   for(const g of data){
+    const openItems = g.items.filter(t=>!t.done).length;
+    const doneItems = g.items.length - openItems;
+    totalOpen += openItems;
+    totalDone += doneItems;
+
+    if(hideDone && g.done && g.items.length===0){
+      // hide groups that are marked done and have no active tasks
+      continue;
+    }
+
     wrap.insertBefore(renderGroup(g),addBtn);
   }
+
+  if(statOpen) statOpen.textContent = totalOpen;
+  if(statDone) statDone.textContent = totalDone;
 }
 
 addBtn.onclick=async()=>{
@@ -111,19 +180,108 @@ addBtn.onclick=async()=>{
   render();
 };
 
+hideDoneToggle?.addEventListener('change',()=>{
+  hideDone = hideDoneToggle.checked;
+  localStorage.setItem(LS_HIDE_DONE_KEY, hideDone ? '1':'0');
+  render();
+});
+
 wrap.addEventListener('click',async e=>{
-  const btn=e.target.closest('button[data-act]');
+  const btn=e.target.closest('button[data-act], .collapse-btn');
   if(!btn)return;
   const act=btn.dataset.act;
   const group=btn.closest('.group');
   const gid=parseInt(group?.dataset.id||'0',10);
 
+  if(act==='collapse'){
+    group.classList.toggle('collapsed');
+    const id = gid;
+    if(group.classList.contains('collapsed')) collapsedGroups.add(id);
+    else collapsedGroups.delete(id);
+    saveCollapsed();
+    btn.textContent = group.classList.contains('collapsed') ? '▶' : '▼';
+    return;
+  }
+
+  if(!btn.dataset.act) return;
+
   if(act==='toggle-group'){await apiToggleGroup(gid);render();return;}
-  if(act==='del-group'){if(confirm('Delete group and all tasks?')){await apiDeleteGroup(gid);render();}return;}
+  if(act==='del-group'){
+    if(confirm('Delete group and all tasks?')){
+      await apiDeleteGroup(gid);
+      collapsedGroups.delete(gid);
+      saveCollapsed();
+      render();
+    }
+    return;
+  }
 
   const taskEl=btn.closest('.task');
-  if(act==='toggle-task'){const tid=taskEl.dataset.task;await apiToggleTask(tid);render();return;}
-  if(act==='del-task'){const tid=taskEl.dataset.task;if(confirm('Delete task?')){await apiDeleteTask(tid);render();}return;}
+  if(act==='toggle-task'){
+    const tid=taskEl.dataset.task;
+    await apiToggleTask(tid);
+    render();
+    return;
+  }
+  if(act==='del-task'){
+    const tid=taskEl.dataset.task;
+    if(confirm('Delete task?')){
+      await apiDeleteTask(tid);
+      render();
+    }
+    return;
+  }
+});
+
+/* inline rename helper */
+function beginInlineEdit(textEl, initial, onCommit){
+  const input=document.createElement('input');
+  input.type='text';
+  input.value=initial;
+  input.className='inline-edit';
+  textEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  const restore = () => {
+    input.replaceWith(textEl);
+  };
+
+  const finish = async(commit) => {
+    const val=input.value.trim();
+    restore();
+    if(commit && val && val!==initial){
+      await onCommit(val);
+      render();
+    }
+  };
+
+  input.addEventListener('blur',()=>finish(true));
+  input.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();input.blur();}
+    if(e.key==='Escape'){e.preventDefault();finish(false);}
+  });
+}
+
+/* double-click rename: group title + task text */
+wrap.addEventListener('dblclick',e=>{
+  const groupTitle=e.target.closest('.group-title');
+  if(groupTitle){
+    const group=groupTitle.closest('.group');
+    const gid=parseInt(group.dataset.id||'0',10);
+    const current=groupTitle.textContent.trim();
+    beginInlineEdit(groupTitle,current, async (val)=>{await apiRenameGroup(gid,val);});
+    return;
+  }
+
+  const taskText=e.target.closest('.task-text');
+  if(taskText){
+    const taskEl=taskText.closest('.task');
+    const tid=parseInt(taskEl.dataset.task||'0',10);
+    const current=taskText.textContent.trim();
+    beginInlineEdit(taskText,current, async (val)=>{await apiRenameTask(tid,val);});
+    return;
+  }
 });
 
 wrap.addEventListener('submit',async e=>{

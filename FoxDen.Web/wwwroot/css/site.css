@@ -74,6 +74,7 @@ footer{position:static}
   background:linear-gradient(180deg,#101a2b,#0c1320);
   border:1px solid var(--border); border-radius:var(--radius); padding:12px;
   box-shadow:var(--shadow);
+  margin-bottom: 20px;
   transition:transform .12s ease, border-color .2s ease, background .2s ease;
   position:relative; animation:fadeIn .2s ease; will-change:transform;
 }
@@ -330,4 +331,431 @@ aside#left h3{margin:4px 0 10px; font-size:13px; color:var(--muted); letter-spac
 .group.done .group-header{
   background:linear-gradient(180deg,#163225,#0f1c1a);
   border-bottom-color:#27493e;
+}
+
+ /* MASONRY-ish LAYOUT: 3 COLUMNS */
+    .groups {
+      column-count: 3;
+      column-gap: 12px;
+      width: 100%;
+    }
+
+    @media (max-width: 1100px) {
+      .groups { column-count: 2; }
+    }
+
+    @media (max-width: 700px) {
+      .groups { column-count: 1; }
+    }
+
+    .group {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      background: var(--card-bg,#111);
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 12px;
+      break-inside: avoid;
+    }
+
+    .group.done { opacity:.6; text-decoration:line-through; }
+
+    .group-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:8px;
+      gap: 6px;
+    }
+
+    .group-head-left {
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .collapse-btn {
+      padding: 0 6px;
+      border:none;
+      background:transparent;
+      cursor:pointer;
+      font-size:14px;
+      line-height:1;
+      transform-origin:center;
+    }
+
+    .tasks {
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .task {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:4px 6px;
+      border:1px solid var(--line);
+      border-radius:6px;
+    }
+
+    .task.done { opacity:.6;text-decoration:line-through; }
+
+    .add-form {
+      display:flex;
+      gap:6px;
+      margin-top:6px;
+    }
+
+    .add-form input { flex:1; }
+
+    .add-group {
+      border:2px dashed var(--line);
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      min-height:140px;
+      font-size:32px;
+      break-inside: avoid;
+      margin-bottom: 12px;
+    }
+
+    /* COLLAPSED STATE */
+    .group.collapsed .tasks,
+    .group.collapsed .add-form {
+      display:none;
+    }
+
+
+  /* layout for tasks page */
+.tasks-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.tasks-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  margin-bottom:12px;
+}
+
+.tasks-header-left .title {
+  font-size:1.4rem;
+  font-weight:600;
+}
+
+.task-stats {
+  margin-top:4px;
+  font-size:0.9rem;
+  opacity:0.8;
+}
+
+.hide-done-toggle {
+  margin-top:6px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:0.9rem;
+  cursor:pointer;
+}
+
+.hide-done-toggle input {
+  accent-color:var(--accent, #4da3ff);
+}
+
+.task-fox {
+  height:96px;
+  pointer-events:none;
+  user-select:none;
+}
+
+.tasks-groups-title {
+  font-weight:500;
+  margin-bottom:8px;
+}
+
+/* masonry-style columns */
+.groups {
+  column-count:3;
+  column-gap:12px;
+  width:100%;
+}
+
+@media (max-width:1100px) {
+  .groups { column-count:2; }
+}
+@media (max-width:700px) {
+  .groups { column-count:1; }
+}
+
+.group {
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px;
+  background:var(--card-bg,#111);
+  display:flex;
+  flex-direction:column;
+  margin-bottom:12px;
+  break-inside:avoid;
+}
+
+.group.done {
+  opacity:.6;
+  text-decoration:line-through;
+}
+
+.group-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+  gap:6px;
+}
+
+.group-head-left {
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.group-head-right {
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.group-title {
+  cursor:pointer;
+}
+
+.group-count {
+  font-size:0.8rem;
+  padding:2px 6px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  opacity:0.8;
+}
+
+.collapse-btn {
+  padding:0 6px;
+  border:none;
+  background:transparent;
+  cursor:pointer;
+  font-size:14px;
+  line-height:1;
+}
+
+.tasks {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.task {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:4px 6px;
+  border:1px solid var(--line);
+  border-radius:6px;
+}
+
+.task.done {
+  opacity:.6;
+  text-decoration:line-through;
+}
+
+.task-text {
+  cursor:pointer;
+}
+
+.add-form {
+  display:flex;
+  gap:6px;
+  margin-top:6px;
+}
+
+.add-form input {
+  flex:1;
+}
+
+.add-group {
+  border:2px dashed var(--line);
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  min-height:140px;
+  font-size:32px;
+  break-inside:avoid;
+  margin-bottom:12px;
+}
+
+/* collapsed groups */
+.group.collapsed .tasks,
+.group.collapsed .add-form {
+  display:none;
+}
+
+/* inline editor */
+.inline-edit {
+  width:100%;
+  background:transparent;
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:2px 4px;
+  color:inherit;
+  font:inherit;
+}
+
+
+/* hide-done toggle row */
+.hide-done-toggle {
+  margin-top:6px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:0.9rem;
+}
+
+/* iOS-like switch */
+.switch {
+  position:relative;
+  display:inline-block;
+  width:38px;
+  height:20px;
+}
+
+.switch input {
+  opacity:0;
+  width:0;
+  height:0;
+}
+
+.slider {
+  position:absolute;
+  cursor:pointer;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+  background:rgba(255,255,255,0.1);
+  border-radius:999px;
+  transition:0.2s;
+}
+
+.slider:before {
+  position:absolute;
+  content:"";
+  height:14px;
+  width:14px;
+  left:3px;
+  top:3px;
+  border-radius:50%;
+  background:#999;
+  transition:0.2s;
+}
+
+.switch input:checked + .slider {
+  background:var(--accent,#4da3ff);
+}
+
+.switch input:checked + .slider:before {
+  transform:translateX(16px);
+  background:#fff;
+}
+
+.hide-done-label {
+  opacity:0.9;
+}
+
+/* icon buttons with images */
+.btn.icon {
+  padding:4px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.icon-img {
+  width:16px;
+  height:16px;
+  display:block;
+}
+
+/* prettier Add group card */
+.add-group {
+  border:2px dashed var(--line);
+  border-radius:12px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  min-height:140px;
+  font-size:0.95rem;
+  gap:8px;
+  opacity:0.9;
+  transition:opacity 0.15s, transform 0.15s;
+}
+
+.add-group:hover {
+  opacity:1;
+  transform:translateY(-1px);
+}
+
+/* The Add-group tile should behave like a full-width card */
+.add-group {
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  padding:0;
+  margin-bottom:12px;
+  gap:12px;
+}
+
+/* FULL WIDTH IMAGE */
+.add-group-fox {
+  width:100%;
+  height:auto;
+  display:block;
+  user-select:none;
+  pointer-events:none;
+
+  /* FEATHER THE EDGES */
+  -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      white 15%,
+      white 85%,
+      transparent 100%
+  );
+  mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      white 15%,
+      white 85%,
+      transparent 100%
+  );
+
+  /* Optional: also feather left/right if your image has hard edges */
+  -webkit-mask-composite: intersect;
+  mask-composite: intersect;
+
+  /* Smooth fade */
+  transition:0.2s ease;
+}
+
+/* Optional hover effect */
+.add-group:hover .add-group-fox {
+  filter:brightness(1.1);
 }

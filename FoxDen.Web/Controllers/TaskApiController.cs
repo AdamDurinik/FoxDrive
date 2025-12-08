@@ -37,6 +37,7 @@ public class TaskApiController : ControllerBase
 
     // ---- GROUPS
     public record CreateGroupDto(string Name);
+    public record RenameGroupDto(string Name);
 
     [HttpPost("group")]
     [ValidateAntiForgeryToken]
@@ -47,6 +48,18 @@ public class TaskApiController : ControllerBase
         _db.TaskGroups.Add(g);
         await _db.SaveChangesAsync();
         return Ok(g);
+    }
+
+    [HttpPut("group/{id:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RenameGroup(int id, [FromBody] RenameGroupDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name required.");
+        var g = await _db.TaskGroups.FindAsync(id);
+        if (g is null) return NotFound();
+        g.Name = dto.Name.Trim();
+        await _db.SaveChangesAsync();
+        return Ok(new { g.Id, g.Name });
     }
 
     [HttpPost("group/{id:int}/toggle")]
@@ -73,6 +86,7 @@ public class TaskApiController : ControllerBase
 
     // ---- TASKS
     public record CreateTaskDto(int GroupId, string Text);
+    public record RenameTaskDto(string Text);
 
     [HttpPost("task")]
     [ValidateAntiForgeryToken]
@@ -86,6 +100,18 @@ public class TaskApiController : ControllerBase
         _db.TaskItems.Add(it);
         await _db.SaveChangesAsync();
         return Ok(it);
+    }
+
+    [HttpPut("task/{id:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RenameTask(int id, [FromBody] RenameTaskDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Text)) return BadRequest("Text required.");
+        var it = await _db.TaskItems.FindAsync(id);
+        if (it is null) return NotFound();
+        it.Text = dto.Text.Trim();
+        await _db.SaveChangesAsync();
+        return Ok(new { it.Id, it.Text });
     }
 
     [HttpPost("task/{id:int}/toggle")]
