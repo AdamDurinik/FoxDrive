@@ -1,0 +1,116 @@
+@{
+    ViewData["Title"] = "FoxDen – Recipe";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>@ViewData["Title"]</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+
+<header>
+    <div style="font-weight:600; display:flex; align-items:center; gap:6px;">
+        <span>FoxDen</span>
+        @if (User?.Identity?.IsAuthenticated ?? false)
+        {
+            <span class="brand-user">@User.Identity!.Name</span>
+        }
+    </div>
+
+    <div class="header-actions">
+      <a class="btn" href="/recepies">Back</a>
+      <a class="btn primary" id="cookBtn">Cook</a>
+      <a class="btn" id="editBtn">Edit</a>
+      <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn danger">Logout</button>
+      </form>
+    </div>
+</header>
+
+<main class="mt-16">
+  <div class="card recipe-view">
+
+    <div class="recipe-hero">
+      <div id="recipeImage" class="recipe-hero-img"></div>
+      <div class="recipe-hero-meta">
+        <div class="title" id="recipeName">Recipe</div>
+        <div class="muted">
+          <span id="recipeStars">☆☆☆☆☆</span>
+          · 👥 <span id="recipeServings">?</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="recipe-section">
+      <h3>Ingredients</h3>
+      <ul id="ingredients" class="ingredient-list"></ul>
+    </div>
+
+    <div class="recipe-section">
+      <h3>Steps</h3>
+      <ol id="steps" class="steps-list"></ol>
+    </div>
+
+  </div>
+</main>
+
+<script>
+function stars(r){
+  let s='';
+  for(let i=1;i<=5;i++) s+=i<=r?'★':'☆';
+  return s;
+}
+
+async function apiGetVersion(){
+  const id = location.pathname.split('/').pop();
+  const r = await fetch(`/api/recepies/version/${id}`, { cache:'no-store' });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function render(data){
+  document.getElementById('recipeName').textContent = data.name;
+  document.getElementById('recipeStars').textContent = stars(data.rating || 0);
+  document.getElementById('recipeServings').textContent = data.servings;
+
+  const img = data.photo?.url
+    ? `/images/${data.photo.url}`
+    : '/resources/recipe-placeholder.png';
+
+  document.getElementById('recipeImage')
+    .style.backgroundImage = `url('${img}')`;
+
+  const ing = document.getElementById('ingredients');
+  ing.innerHTML = '';
+  data.ingredients.forEach(i=>{
+    const li=document.createElement('li');
+    li.textContent = `${i.quantity} ${i.quantityType} ${i.ingredient.name}`;
+    ing.appendChild(li);
+  });
+
+  const steps = document.getElementById('steps');
+  steps.innerHTML = '';
+  data.steps.forEach(s=>{
+    const li=document.createElement('li');
+    li.textContent = s.description;
+    steps.appendChild(li);
+  });
+
+  document.getElementById('cookBtn').onclick =
+    () => location.href = `/recepies/cook/${data.id}`;
+
+  document.getElementById('editBtn').onclick =
+    () => location.href = `/recepies/edit/${data.id}`;
+}
+
+apiGetVersion().then(render).catch(err=>{
+  alert(err.message);
+});
+</script>
+
+</body>
+</html>

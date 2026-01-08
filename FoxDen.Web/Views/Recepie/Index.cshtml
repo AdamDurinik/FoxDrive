@@ -1,0 +1,124 @@
+@{
+    ViewData["Title"] = "FoxDen – Recipes";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>@ViewData["Title"]</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+
+<header>
+    <div style="font-weight:600; display:flex; align-items:center; gap:6px;">
+        <span>FoxDen</span>
+        @if (User?.Identity?.IsAuthenticated ?? false)
+        {
+            <span class="brand-user">@User.Identity!.Name</span>
+        }
+    </div>
+
+    <div class="header-actions">
+      <a class="btn" href="/">Home</a>
+      <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn danger">Logout</button>
+      </form>
+    </div>
+</header>
+
+<main class="mt-16">
+  <div class="card">
+
+    <div class="recipes-header">
+      <div class="title">Recipes</div>
+      <div class="muted">Pick something to cook</div>
+    </div>
+
+    <div id="recipes" class="recipe-grid">
+      <div class="recipe-card add-card" id="addRecipe">
+        <span>＋</span>
+        <div>Add recipe</div>
+      </div>
+    </div>
+
+  </div>
+</main>
+<script>
+function antiForgery(){
+  const f=document.querySelector('#logoutForm input[name="__RequestVerificationToken"]');
+  return f?f.value:'';
+}
+
+async function apiGetRecipes(){
+  const r = await fetch('/api/recepie', { cache:'no-store' });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function pickBestVersion(versions){
+  if(!versions || versions.length===0) return null;
+  const rated = versions.filter(v => v.rating > 0);
+  if(rated.length){
+    rated.sort((a,b)=>b.rating-a.rating);
+    return rated[0];
+  }
+  versions.sort((a,b)=>new Date(b.createdUtc)-new Date(a.createdUtc));
+  return versions[0];
+}
+
+function stars(r){
+  let s='';
+  for(let i=1;i<=5;i++){
+    s += i<=r ? '★' : '☆';
+  }
+  return s;
+}
+
+function recipeCard(group){
+  const v = pickBestVersion(group.versions);
+  const img = v?.photo?.url
+    ? `/images/${v.photo.url}`
+    : '/resources/recipe-placeholder.png';
+
+  const div = document.createElement('div');
+  div.className = 'recipe-card';
+  div.innerHTML = `
+    <div class="recipe-img" style="background-image:url('${img}')"></div>
+    <div class="recipe-body">
+      <div class="recipe-title">${group.name}</div>
+      <div class="recipe-meta">
+        <span class="stars">${stars(v?.rating || 0)}</span>
+        <span class="servings">👥 ${v?.servings ?? '?'}</span>
+      </div>
+    </div>
+  `;
+
+  div.onclick = () => {
+    if(v) location.href = `/recepies/view-recepie/${v.id}`;
+    };
+    return div;
+  }
+
+async function render(){
+  const wrap = document.getElementById('recipes');
+  wrap.querySelectorAll('.recipe-card:not(.add-card)').forEach(e=>e.remove());
+
+  const data = await apiGetRecipes();
+
+  for(const g of data){
+    wrap.insertBefore(recipeCard(g), document.getElementById('addRecipe'));
+  }
+}
+
+document.getElementById('addRecipe').onclick = () => {
+  location.href = '/recepies/create-recepie';
+};
+
+render();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,156 @@
+@{
+    ViewData["Title"] = "FoxDen – New Recipe";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>@ViewData["Title"]</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+
+<header>
+    <div style="font-weight:600; display:flex; align-items:center; gap:6px;">
+        <span>FoxDen</span>
+        @if (User?.Identity?.IsAuthenticated ?? false)
+        {
+            <span class="brand-user">@User.Identity!.Name</span>
+        }
+    </div>
+
+    <div class="header-actions">
+      <a class="btn" href="/recepie">Cancel</a>
+      <button class="btn primary" id="saveBtn">Save</button>
+      <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn danger">Logout</button>
+      </form>
+    </div>
+</header>
+
+<main class="mt-16">
+  <div class="card recipe-create">
+
+    <div class="section">
+      <div class="title">New Recipe</div>
+      <input id="name" class="big-input" placeholder="Recipe name (e.g. Creamy Bacon Pasta)" />
+    </div>
+
+    <div class="section">
+      <label class="muted">Servings</label>
+      <input id="servings" type="number" min="1" value="2" class="small-input" />
+    </div>
+
+    <div class="section">
+      <h3>Ingredients</h3>
+      <div id="ingredients"></div>
+      <button class="btn ghost" id="addIngredient">＋ Add ingredient</button>
+    </div>
+
+    <div class="section">
+      <h3>Steps</h3>
+      <div id="steps"></div>
+      <button class="btn ghost" id="addStep">＋ Add step</button>
+    </div>
+
+  </div>
+</main>
+
+<script>
+function antiForgery(){
+  const f=document.querySelector('#logoutForm input[name="__RequestVerificationToken"]');
+  return f?f.value:'';
+}
+
+/* INGREDIENTS */
+const ingredientsWrap = document.getElementById('ingredients');
+
+function ingredientRow(){
+  const div = document.createElement('div');
+  div.className = 'ingredient-row';
+  div.innerHTML = `
+    <input placeholder="Ingredient" class="ing-name" />
+    <input placeholder="Qty" class="ing-qty" />
+    <select class="ing-unit">
+      <option>g</option><option>Kg</option>
+      <option>mL</option><option>L</option>
+      <option>cup</option><option>tbsp</option><option>tsp</option>
+      <option>pice</option><option>slice</option><option>pinch</option>
+    </select>
+    <button class="btn icon danger">✕</button>
+  `;
+  div.querySelector('button').onclick = ()=>div.remove();
+  return div;
+}
+
+document.getElementById('addIngredient').onclick = ()=>{
+  ingredientsWrap.appendChild(ingredientRow());
+};
+
+/* STEPS */
+const stepsWrap = document.getElementById('steps');
+
+function stepRow(){
+  const div = document.createElement('div');
+  div.className = 'step-row';
+  div.innerHTML = `
+    <textarea placeholder="Describe this step…"></textarea>
+    <button class="btn icon danger">✕</button>
+  `;
+  div.querySelector('button').onclick = ()=>div.remove();
+  return div;
+}
+
+document.getElementById('addStep').onclick = ()=>{
+  stepsWrap.appendChild(stepRow());
+};
+
+/* SAVE */
+document.getElementById('saveBtn').onclick = async ()=>{
+  const name = document.getElementById('name').value.trim();
+  if(!name){
+    alert('Recipe name is required.');
+    return;
+  }
+
+  const data = {
+    name,
+    servings: parseInt(document.getElementById('servings').value,10) || 1,
+    ingredients: [...ingredientsWrap.children].map(r=>({
+      name: r.querySelector('.ing-name').value,
+      quantity: r.querySelector('.ing-qty').value,
+      quantityType: r.querySelector('.ing-unit').value
+    })).filter(i=>i.name),
+    steps: [...stepsWrap.children].map((r,i)=>({
+      order: i+1,
+      description: r.querySelector('textarea').value
+    })).filter(s=>s.description)
+  };
+
+  const r = await fetch('/api/recepie', {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'RequestVerificationToken': antiForgery()
+    },
+    body: JSON.stringify(data)
+  });
+
+  if(!r.ok){
+    alert(await r.text());
+    return;
+  }
+
+  const created = await r.json();
+  location.href = `/recepie/RecepieView/${created.versionId}`;
+};
+
+/* bootstrap */
+document.getElementById('addIngredient').click();
+document.getElementById('addStep').click();
+</script>
+
+</body>
+</html>
